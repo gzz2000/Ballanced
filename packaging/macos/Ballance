@@ -1,0 +1,64 @@
+#!/bin/zsh
+set -euo pipefail
+
+contents_dir="${0:A:h:h}"
+resources_dir="$contents_dir/Resources"
+game_dir="$resources_dir/Game"
+defaults_dir="$resources_dir/Defaults"
+data_dir="$HOME/Library/Application Support/Ballance"
+
+mkdir -p \
+  "$data_dir/ModLoader/Maps" \
+  "$data_dir/ModLoader/Mods" \
+  "$data_dir/ModLoader/Configs" \
+  "$data_dir/ModLoader/Fonts" \
+  "$data_dir/ModLoader/Themes" \
+  "$data_dir/Screenshots"
+
+# Early native builds accidentally treated Windows backslashes as filename
+# characters. Preserve those settings and migrate generated frame caps to
+# display-synchronized presentation.
+legacy_bml_config="$data_dir/ModLoader\\Configs\\BML.cfg"
+native_bml_config="$data_dir/ModLoader/Configs/BML.cfg"
+if [[ ! -e "$native_bml_config" && -f "$legacy_bml_config" ]]; then
+  cp "$legacy_bml_config" "$native_bml_config"
+  /usr/bin/sed -i '' \
+    's/^\([[:space:]]*I SetMaxFrameRate \)240$/\10/' \
+    "$native_bml_config"
+fi
+
+if [[ -f "$native_bml_config" ]]; then
+  /usr/bin/sed -i '' \
+    's/^\([[:space:]]*I SetMaxFrameRate \)60$/\10/' \
+    "$native_bml_config"
+fi
+
+# Preserve scores from the earlier Wine bundle on the first native launch.
+if [[ ! -e "$data_dir/Database.tdb" && -f "$data_dir/Game/Database.tdb" ]]; then
+  cp "$data_dir/Game/Database.tdb" "$data_dir/Database.tdb"
+fi
+
+# Preserve user-installed maps from both layouts used by earlier bundles.
+for legacy_maps in "$data_dir/Maps" "$data_dir/Game/ModLoader/Maps"; do
+  if [[ -d "$legacy_maps" ]]; then
+    while IFS= read -r -d '' source; do
+      destination="$data_dir/ModLoader/Maps/${source:t}"
+      [[ -e "$destination" ]] || cp "$source" "$destination"
+    done < <(find "$legacy_maps" -maxdepth 1 -type f \( -iname '*.nmo' -o -iname '*.cmo' \) -print0)
+  fi
+done
+
+# Seed BML's redistributable UI resources without replacing user edits.
+if [[ -d "$defaults_dir/ModLoader" ]]; then
+  while IFS= read -r -d '' source; do
+    relative="${source#$defaults_dir/ModLoader/}"
+    destination="$data_dir/ModLoader/$relative"
+    mkdir -p "${destination:h}"
+    [[ -e "$destination" ]] || cp "$source" "$destination"
+  done < <(find "$defaults_dir/ModLoader" -type f -print0)
+fi
+
+exec "$game_dir/Bin/Player" \
+  --root-path "$game_dir" \
+  --user-data-path "$data_dir" \
+  "$@"
