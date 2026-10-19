@@ -17,21 +17,12 @@ mkdir -p \
   "$data_dir/Screenshots"
 
 # Early native builds accidentally treated Windows backslashes as filename
-# characters. Preserve those settings and migrate generated frame caps to
-# display-synchronized presentation.
+# characters. Preserve those settings without rewriting the user's chosen
+# frame cap: BML Plus also uses explicit caps for slow-motion practice.
 legacy_bml_config="$data_dir/ModLoader\\Configs\\BML.cfg"
 native_bml_config="$data_dir/ModLoader/Configs/BML.cfg"
 if [[ ! -e "$native_bml_config" && -f "$legacy_bml_config" ]]; then
   cp "$legacy_bml_config" "$native_bml_config"
-  /usr/bin/sed -i '' \
-    's/^\([[:space:]]*I SetMaxFrameRate \)240$/\10/' \
-    "$native_bml_config"
-fi
-
-if [[ -f "$native_bml_config" ]]; then
-  /usr/bin/sed -i '' \
-    's/^\([[:space:]]*I SetMaxFrameRate \)60$/\10/' \
-    "$native_bml_config"
 fi
 
 # Preserve scores from a legacy bundle that was updated in place or from the
