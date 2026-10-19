@@ -28,6 +28,12 @@ ditto "$stage" "$game"
 mkdir -p "$game/Plugins"
 cp "$bml_library" "$game/Plugins/libBMLPlus.dylib"
 
+# Database.tdb is mutable score data at runtime. Keep only a factory seed in
+# Defaults so no code path can accidentally update the signed app resources.
+if [[ -f "$game/Database.tdb" ]]; then
+  mv "$game/Database.tdb" "$resources/Defaults/Database.tdb"
+fi
+
 # Diagnostic, SDK, and build-only artifacts are not runtime content.
 rm -rf "$game/Plugins.disabled" "$game/include" "$game/lib"
 rm -f "$game/Bin/Player.log"

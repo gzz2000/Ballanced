@@ -5,6 +5,7 @@ contents_dir="${0:A:h:h}"
 resources_dir="$contents_dir/Resources"
 game_dir="$resources_dir/Game"
 defaults_dir="$resources_dir/Defaults"
+factory_database="$defaults_dir/Database.tdb"
 data_dir="$HOME/Library/Application Support/Ballance"
 
 mkdir -p \
@@ -33,9 +34,17 @@ if [[ -f "$native_bml_config" ]]; then
     "$native_bml_config"
 fi
 
-# Preserve scores from the earlier Wine bundle on the first native launch.
+# Preserve scores from a legacy bundle that was updated in place or from the
+# earlier Wine bundle on the first native launch. Otherwise seed the writable
+# database from the app's read-only defaults.
+if [[ ! -e "$data_dir/Database.tdb" && -f "$game_dir/Database.tdb" ]]; then
+  cp "$game_dir/Database.tdb" "$data_dir/Database.tdb"
+fi
 if [[ ! -e "$data_dir/Database.tdb" && -f "$data_dir/Game/Database.tdb" ]]; then
   cp "$data_dir/Game/Database.tdb" "$data_dir/Database.tdb"
+fi
+if [[ ! -e "$data_dir/Database.tdb" && -f "$factory_database" ]]; then
+  cp "$factory_database" "$data_dir/Database.tdb"
 fi
 
 # Preserve user-installed maps from both layouts used by earlier bundles.

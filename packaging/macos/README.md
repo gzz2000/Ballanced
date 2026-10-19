@@ -20,5 +20,7 @@ The following environment variables can override build inputs:
 
 Mutable state is stored under
 `~/Library/Application Support/Ballance`; the application bundle remains
-read-only. Rendering follows the active display's synchronized presentation
+read-only. `Contents/Resources/Defaults/Database.tdb` is only the factory seed;
+the game never opens it directly and always reads and writes the copy in
+Application Support. Rendering follows the active display's synchronized presentation
 rate while input and gameplay use the deterministic fixed scheduler.
