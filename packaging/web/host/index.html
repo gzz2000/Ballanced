@@ -1,30 +1,17 @@
 <!doctype html>
 <html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ballance</title><link rel="stylesheet" href="style.css">
-<header><strong>Ballance</strong><button id="quit" disabled>退出并保存</button>
-<button id="capture" disabled>保存状态 F5</button><button id="restore" disabled>恢复状态 F8</button>
-<label>抗锯齿 <select id="samples"><option value="4">4× MSAA</option><option value="1">关闭</option></select></label>
-<button id="toggle-sidebar" aria-controls="sidebar" aria-expanded="false">地图与 TAS</button>
-<div id="status-bar"><span id="status" role="status">正在加载游戏…</span><span id="cache-status"><span id="offline" role="status">正在准备离线缓存…</span><progress id="cache-progress" aria-label="离线资源下载进度"></progress></span></div></header>
-<main><section id="game-pane"><div id="stage"><canvas id="canvas" tabindex="0" width="640" height="480" aria-label="Ballance 游戏画面"></canvas>
-<div id="restart-screen" hidden><button id="restart">重新开始</button></div></div>
-</section><aside id="sidebar" aria-labelledby="sidebar-title" hidden>
-<div class="sidebar-heading"><h2 id="sidebar-title">地图与 TAS</h2><button id="close-sidebar" aria-label="收起侧栏">收起</button></div>
-<details open><summary>地图、TAS 与用户数据</summary>
-<p>数据保存在当前浏览器。清除网站数据会删除存档；可以下载文件备份。</p>
-<label class="button">导入地图 <input id="maps" type="file" accept=".nmo" multiple disabled></label>
-<label class="button">导入 TAS <input id="tapes" type="file" accept=".tas" multiple disabled></label>
-<button id="save" disabled>立即保存数据</button><button id="refresh" disabled>刷新文件列表</button>
-<p id="storage" role="status"></p><ul id="files"></ul></details>
-<details id="editor"><summary>TAS 采样编辑器</summary>
-<p>在菜单中编辑副本，再选择关卡使用严格 x87 解算器回放。编号从 0 开始；每项是一次按键采样。</p>
-<select id="records" aria-label="TAS 录像"></select><button id="load-record" disabled>打开录像</button><span id="record-info"></span>
-<p><label>起始采样 <input id="first" type="number" min="0" value="0"></label> <label>结束采样（含） <input id="last" type="number" min="0" value="0"></label>
-<button id="inspect" disabled>读取该采样</button></p><div id="keys"></div>
-<p><label>每采样毫秒数 <input id="delta" type="number" min="0" max="1000" step="any" value="0"></label> 0 表示保留原始时间。
-<button id="apply" disabled>修改所选范围</button><button id="undo" disabled>撤销上次修改</button></p>
-<label>副本名称 <input id="copy-name" value="edited.tas"></label><button id="save-record" disabled>保存副本</button>
-<p><label>回放关卡 <select id="level"></select></label><button id="play-record" disabled>回放已保存录像</button></p>
-<p id="editor-status" role="status"></p><pre id="preview"></pre>
-</details>
+<header><strong>Ballance</strong><div id="status-bar"><span id="status" role="status">正在准备资源…</span><span id="cache-status"><span id="offline" role="status">正在准备离线缓存…</span><progress id="cache-progress" aria-label="离线资源下载进度"></progress></span></div><button id="toggle-sidebar" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">☰</span> 设置</button></header>
+<main><section id="game-pane"><div id="stage"><canvas id="canvas" tabindex="0" width="640" height="480" aria-label="Ballance 游戏画面"></canvas><div id="restart-screen" hidden><button id="restart">重新开始</button></div></div></section>
+<aside id="sidebar" aria-labelledby="sidebar-title" hidden>
+<div class="sidebar-heading"><h2 id="sidebar-title">设置</h2><button id="close-sidebar" aria-label="收起设置">✕</button></div>
+<div class="tabs" role="tablist" aria-label="设置分类"><button id="tab-display" role="tab" aria-selected="true" aria-controls="panel-display">画面</button><button id="tab-data" role="tab" aria-selected="false" aria-controls="panel-data" tabindex="-1">用户数据</button><button id="tab-editor" role="tab" aria-selected="false" aria-controls="editor" tabindex="-1">TAS 编辑器</button></div>
+<section id="panel-display" role="tabpanel" aria-labelledby="tab-display"><h3>画面设置</h3><label class="setting-row">抗锯齿 <select id="samples"><option value="4">4× MSAA</option><option value="1">关闭</option></select></label><p>画面随窗口自动调整，菜单保持原始比例。</p><h3>练习快捷键</h3><p>默认 A 保存状态，Z 恢复状态。可在游戏内的 PracticeTools 设置中修改。</p></section>
+<section id="panel-data" role="tabpanel" aria-labelledby="tab-data" hidden><div class="actions"><label class="button">导入地图<input id="maps" type="file" accept=".nmo" multiple disabled></label><label class="button">导入 TAS<input id="tapes" type="file" accept=".tas" multiple disabled></label></div><div class="actions"><button id="save" disabled>立即保存</button><button id="refresh" disabled>刷新</button></div><p id="storage" role="status"></p><div class="file-navigation"><button id="file-home" disabled>用户数据</button><button id="file-up" disabled aria-label="上一级文件夹">↑</button><span id="file-path">/</span></div><input id="file-search" type="search" placeholder="搜索文件" aria-label="搜索用户文件"><div class="file-list"><table><thead><tr><th scope="col">名称</th><th scope="col">大小</th><th scope="col"><span class="sr-only">操作</span></th></tr></thead><tbody id="files"></tbody></table></div><p id="file-count"></p><p class="hint">数据保存在此浏览器中。下载文件可备份；清除网站数据会删除存档。</p></section>
+<section id="editor" role="tabpanel" aria-labelledby="tab-editor" hidden><p>编辑副本后选择关卡回放，原录像不会被覆盖。</p>
+<label class="field">TAS 录像<select id="records" aria-label="TAS 录像"></select></label><button id="load-record" disabled>打开录像</button><span id="record-info"></span>
+<div class="field-pair"><label class="field">起始采样<input id="first" type="number" min="0" value="0"></label><label class="field">结束采样（含）<input id="last" type="number" min="0" value="0"></label></div><button id="inspect" disabled>读取该采样</button><div id="keys"></div>
+<label class="field">每采样毫秒数<input id="delta" type="number" min="0" max="1000" step="any" value="0"></label><p class="hint">0 表示保留原始时间。</p><div class="actions"><button id="apply" disabled>修改范围</button><button id="undo" disabled>撤销</button></div>
+<label class="field">副本名称<input id="copy-name" value="edited.tas"></label><button id="save-record" disabled>保存副本</button>
+<label class="field">回放关卡<select id="level"></select></label><button id="play-record" disabled>回放已保存录像</button><p id="editor-status" role="status"></p><pre id="preview"></pre></section>
 </aside></main><script type="module" src="app.mjs"></script></html>

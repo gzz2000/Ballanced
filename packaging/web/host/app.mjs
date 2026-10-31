@@ -10,7 +10,16 @@ for(const type of ['pointerdown','keydown'])window.addEventListener(type,resumeA
 // SDL listens on window. Form typing must not become game input, but key-up
 // still reaches SDL so a held game key released over a form cannot get stuck.
 for(const type of ['keydown','keypress'])window.addEventListener(type,event=>{
+    // Navigation keys belong to the game even during OS key repeat. SDL may
+    // decline a repeated edge; that must not re-enable browser scroll/defaults.
+    // Keep delivering every event to SDL and never clear the held physical key.
+    if(event.target===$('canvas')&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','Tab'].includes(event.code))event.preventDefault();
     if(event.target!==$('canvas')){
+        if(type==='keydown'&&event.target.getAttribute?.('role')==='tab'&&['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){
+            const index=tabs.indexOf(event.target.id.slice(4));
+            const next=event.key==='Home'?0:event.key==='End'?2:(index+(event.key==='ArrowRight'?1:2))%3;
+            event.preventDefault();selectTab(tabs[next],true);
+        }
         if(type==='keydown'&&event.key==='Escape'&&!$('sidebar').hidden&&$('sidebar').contains(event.target)){
             event.preventDefault();setSidebar(false);
         }
@@ -38,20 +47,46 @@ function walk(path){
     }
     return files;
 }
+let fileDirectory='/user';
+const formatSize=n=>n>=1e6?(n/1e6).toFixed(1)+' MB':n>=1000?(n/1000).toFixed(1)+' KB':n+' B';
 function listFiles(){
-    $('files').replaceChildren();
-    refreshRecords();
-    for(const entry of walk('/user')){
-        const item=document.createElement('li'),button=document.createElement('button');
-        item.append(document.createTextNode(entry.path.slice(6)+' · '+entry.size+' B'));
-        button.textContent='下载';button.onclick=()=>{
-            player._BallanceWebFlushFiles();
-            const url=URL.createObjectURL(new Blob([player.FS.readFile(entry.path)]));
-            const a=document.createElement('a');a.href=url;a.download=entry.path.split('/').pop();a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-        };
-        item.append(button);$('files').append(item);
+    $('files').replaceChildren();refreshRecords();
+    if(!userReady)return;
+    const query=$('file-search').value.trim().toLocaleLowerCase();
+    let entries;
+    if(query)entries=walk('/user').filter(f=>!f.path.split('/').some(p=>p.startsWith('.'))&&f.path.toLocaleLowerCase().includes(query));
+    else entries=player.FS.readdir(fileDirectory).filter(n=>!n.startsWith('.')).map(name=>{
+        const path=fileDirectory+'/'+name,stat=player.FS.stat(path);
+        return {path,size:stat.size,directory:player.FS.isDir(stat.mode)};
+    });
+    entries.sort((a,b)=>Number(!!b.directory)-Number(!!a.directory)||a.path.localeCompare(b.path));
+    $('file-path').textContent=query?'搜索结果':fileDirectory.slice(5)||'/';
+    $('file-up').disabled=fileDirectory==='/user';$('file-home').disabled=false;
+    for(const entry of entries){
+        const row=document.createElement('tr'),name=document.createElement('td'),size=document.createElement('td'),actions=document.createElement('td');
+        const label=query?entry.path.slice(6):entry.path.split('/').pop();
+        if(entry.directory){
+            const button=document.createElement('button');button.className='folder';button.textContent='▸ '+label;
+            button.onclick=()=>{fileDirectory=entry.path;$('file-search').value='';listFiles()};name.append(button);size.textContent='—';
+        }else{
+            name.textContent=label;
+            const type=document.createElement('span');type.className='file-type';type.textContent=label.split('.').pop().toUpperCase();name.append(type);
+            size.textContent=formatSize(entry.size);
+            const button=document.createElement('button');button.textContent='下载';button.setAttribute('aria-label','下载 '+label);
+            button.onclick=()=>{
+                player._BallanceWebFlushFiles();
+                const url=URL.createObjectURL(new Blob([player.FS.readFile(entry.path)]));
+                const a=document.createElement('a');a.href=url;a.download=entry.path.split('/').pop();a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+            };actions.append(button);
+        }
+        row.append(name,size,actions);$('files').append(row);
     }
+    if(!entries.length){const row=document.createElement('tr'),cell=document.createElement('td');cell.colSpan=3;cell.textContent=query?'没有匹配的文件':'此文件夹为空';row.append(cell);$('files').append(row)}
+    $('file-count').textContent=entries.length+' 项';
 }
+$('file-search').oninput=listFiles;
+$('file-home').onclick=()=>{fileDirectory='/user';$('file-search').value='';listFiles()};
+$('file-up').onclick=()=>{fileDirectory=fileDirectory.slice(0,fileDirectory.lastIndexOf('/'))||'/user';$('file-search').value='';listFiles()};
 async function persist(){
     try{await sync();storage('已保存到此浏览器。');listFiles()}
     catch(error){storage('保存失败：'+error.message);throw error}
@@ -95,6 +130,14 @@ function setSidebar(open){
 }
 $('toggle-sidebar').onclick=()=>setSidebar($('sidebar').hidden);
 $('close-sidebar').onclick=()=>setSidebar(false);
+const tabs=['display','data','editor'];
+function selectTab(name,focus=false){
+    for(const tab of tabs){const active=tab===name,button=$('tab-'+tab);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;$(tab==='editor'?'editor':'panel-'+tab).hidden=!active}
+    if(name==='data'&&userReady)listFiles();
+    if(focus)$('tab-'+name).focus();
+}
+for(const name of tabs)$('tab-'+name).onclick=()=>selectTab(name);
+
 async function importFiles(input,directory,extension){
     try{
         for(const file of input.files){
@@ -109,12 +152,14 @@ async function importFiles(input,directory,extension){
 }
 function showRestart(message){
     running=false;clearInterval(timer);
-    for(const id of ['quit','capture','restore','load-record','inspect','apply','undo','save-record','play-record'])$(id).disabled=true;
+    for(const id of ['load-record','inspect','apply','undo','save-record','play-record'])$(id).disabled=true;
     $('stage').classList.add('ended');$('restart-screen').hidden=false;status(message);
 }
 async function startGame(){
-    status('正在加载游戏…');
+    status('正在准备资源…');
     try{
+        await cachePreparation;
+        status('正在启动游戏…');
         const manifest=await(await fetch('./assets.json')).json();
         gpu=await createBallanceGpu($('canvas'),await(await fetch('./shaders.json')).json());
         const {default:createPlayer}=await import('./PlayerBrowser.mjs');
@@ -122,13 +167,27 @@ async function startGame(){
             print:line=>console.log(line),printErr:line=>console.error(line),
             onAbort:reason=>showRestart('游戏运行失败：'+reason),
             onBallanceExit:async()=>{
-                running=false;clearInterval(timer);$('quit').disabled=true;
+                running=false;clearInterval(timer);
                 try{await persist();showRestart('游戏已退出，数据已保存。')}
                 catch(error){restartNeedsSave=true;showRestart('游戏已退出，但保存失败：'+error.message+'。重新开始时将重试保存。')}
             }});
         player.FS.mkdirTree('/user');player.FS.mount(player.IDBFS,{},'/user');
         await new Promise((resolve,reject)=>player.FS.syncfs(true,error=>error?reject(error):resolve()));
-        userReady=true;player.FS.mkdirTree('/game/Bin');let cursor=0;
+        userReady=true;
+        // One-time migration of the previous browser defaults; preserve other
+        // configured keys, and allow F5/F8 again after the migration marker.
+        const marker='/user/.web-practice-keys-v2',config='/user/ModLoader/Configs/PracticeTools.cfg';
+        if(!player.FS.analyzePath(marker).exists){
+            if(player.FS.analyzePath(config).exists){
+                let text=player.FS.readFile(config,{encoding:'utf8'});
+                if(/K SaveState 63\b/.test(text)&&/K RestoreState 66\b/.test(text)){
+                    text=text.replace(/K SaveState 63\b/,'K SaveState 30').replace(/K RestoreState 66\b/,'K RestoreState 44');
+                    player.FS.writeFile(config,text);
+                }
+            }
+            player.FS.writeFile(marker,'A/Z defaults migrated');
+        }
+        player.FS.mkdirTree('/game/Bin');let cursor=0;
         await Promise.all(Array.from({length:8},async()=>{
             while(cursor<manifest.assets.length){
                 const asset=manifest.assets[cursor++];
@@ -143,9 +202,9 @@ async function startGame(){
         const code=player.callMain(['--root-path','/game','--cmo','/game/base.cmo','--user-data-path','/user','--rasterizer','webgpu']);
         if(code)throw new Error('Player 初始化失败 '+code);
         running=true;resizeGame();gpu.setSamples(Number($('samples').value));
-        for(const id of ['quit','maps','tapes','save','refresh','capture','restore'])$(id).disabled=false;
+        for(const id of ['maps','tapes','save','refresh'])$(id).disabled=false;
         timer=setInterval(()=>{void persist().catch(()=>{})},10000);
-        await persist();status('方向键移动，Enter 确认，Esc 暂停。');$('canvas').focus();
+        await persist();status('');$('canvas').focus();
         // Keep introspection available for local acceptance tests and diagnostics.
         window.ballance={player,gpu,get running(){return running},persist};
     }catch(error){showRestart('无法启动：'+error.message);console.error(error)}
@@ -159,7 +218,6 @@ $('restart').onclick=async()=>{
         location.reload();
     }catch(error){status('保存失败，请重试：'+error.message);$('restart').disabled=false}
 };
-$('quit').onclick=()=>{if(running){$('quit').disabled=true;player._BallanceWebRequestQuit()}};
 $('samples').onchange=()=>gpu?.setSamples(Number($('samples').value));
 $('save').onclick=()=>{void persist().catch(()=>{})};$('refresh').onclick=listFiles;
 $('maps').onchange=()=>importFiles($('maps'),'/user/ModLoader/Maps','.nmo');
@@ -168,6 +226,7 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&userReady)
 
 // An active worker means every versioned game/runtime asset was cached and
 // checked successfully. A failed install never replaces the previous version.
+const cachePreparation=(async()=>{
 if('serviceWorker' in navigator){
     let cacheReady=false;
     const progress=$('cache-progress');
@@ -185,7 +244,7 @@ if('serviceWorker' in navigator){
             }
         }
     });
-    navigator.serviceWorker.register('./sw.js').then(async registration=>{
+    return navigator.serviceWorker.register('./sw.js').then(async registration=>{
         const ready=await navigator.serviceWorker.ready;
         cacheReady=true; // Queued install progress must not overwrite readiness.
         progress.hidden=true;$('offline').textContent='离线缓存已就绪';
@@ -195,6 +254,7 @@ if('serviceWorker' in navigator){
         if(!persistent)$('offline').title+=' 浏览器仍可能在空间不足时清理网站数据，请备份存档。';
     }).catch(error=>{progress.hidden=true;$('offline').textContent='离线缓存失败：'+error.message});
 }else {$('cache-progress').hidden=true;$('offline').textContent='当前环境不支持离线缓存，请通过 localhost 或 HTTPS 打开。'}
+})();
 
 const keyNames=['↑','↓','←','→','Shift','Space','Q','Esc','Enter（保留位）'];
 for(const [i,name] of keyNames.entries()){
@@ -246,18 +306,4 @@ editorAction('play-record',()=>{
     $('editor-status').textContent='已启动严格模式回放。F3 停止；Esc 是录像中的游戏暂停键。';$('canvas').focus();
 });
 
-async function checkpoint(action){
-    if(!running||!player._BML_WebRequestCheckpoint(action)){status('请先进入关卡，且不要同时执行多个保存恢复操作。');return;}
-    status(action===1?'正在保存关卡状态…':'正在恢复关卡状态…');
-    const result=await new Promise(resolve=>{
-        const poll=()=>{const result=player._BML_WebCheckpointResult();if(result||!running)resolve(result);else requestAnimationFrame(poll)};poll();
-    });
-    status(result>0?(action===1?'关卡状态已保存在内存中。':'关卡状态和 TAS 回放位置已恢复。'):error());$('canvas').focus();
-}
-$('capture').onclick=()=>checkpoint(1);$('restore').onclick=()=>checkpoint(2);
-window.addEventListener('keydown',event=>{
-    if(event.target===$('canvas')&&!event.repeat&&(event.code==='F5'||event.code==='F8')){
-        event.preventDefault();event.stopImmediatePropagation();void checkpoint(event.code==='F5'?1:2);
-    }
-},true);
 void startGame();

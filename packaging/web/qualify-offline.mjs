@@ -21,7 +21,7 @@ try{
  await page.addInitScript(()=>{
   window.cacheTransfers=[];
   navigator.serviceWorker?.addEventListener('message',event=>{
-   if(event.data?.cacheProgress!==undefined)cacheTransfers.push(event.data);
+   if(event.data?.cacheProgress!==undefined)cacheTransfers.push({...event.data,gameStarted:!!window.ballance?.running});
   });
  });
  page.on('console',message=>{logs.push(message.text());if(message.type()==='error')console.error(message.text())});page.on('pageerror',error=>logs.push('PAGE ERROR '+error));
@@ -41,15 +41,17 @@ try{
  await page.keyboard.press('Shift');
  await page.waitForFunction(()=>ballance.player.SDL3?.audioContext?.state==='running',{},{timeout:10000});
  result.audioAfterGesture='running';
+
  result.cacheTransfer=await page.evaluate(()=>({first:cacheTransfers[0],last:cacheTransfers.at(-1),
   monotonic:cacheTransfers.every((v,i)=>!i||v.cacheBytes>=cacheTransfers[i-1].cacheBytes)}));
+ if(result.cacheTransfer.first.gameStarted)throw new Error('Progress started after game');
  if(!result.cacheTransfer.monotonic||result.cacheTransfer.last?.cacheBytes!==result.cacheTransfer.last?.totalBytes)throw new Error('Cache byte progress incomplete');
- await page.click('#toggle-sidebar');
+ await page.click('#toggle-sidebar');await page.click('#tab-data');
  await page.locator('#maps').setInputFiles(mapPath);await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('导入完成'),{},{timeout:0});
  await page.evaluate(()=>document.querySelector('#status').textContent='Testing next import');
  await page.locator('#tapes').setInputFiles(tapePath);await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('导入完成'),{},{timeout:0});
  if(process.env.BALLANCE_TEST_EDITOR==='1') {
-  await page.locator('#editor summary').click();
+  await page.click('#tab-editor');
   await page.selectOption('#records',{label:tapePath.split('/').pop()});await page.click('#load-record');
   await page.waitForFunction(()=>document.querySelector('#record-info').textContent.includes('次采样'),{},{timeout:0});
   result.edit=await page.evaluate(()=>({first:ballance.player._BML_WebTASKeys(0),delta:ballance.player._BML_WebTASDelta(0)}));
@@ -75,8 +77,8 @@ try{
   await page.waitForFunction(()=>ballance.player.FS.readFile('/user/ModLoader/ModLoader.log',{encoding:'utf8'}).includes('precise x87 (TAS)'),{},{timeout:0});
   await advance(300);
   for(const action of ['capture','restore','restore','capture','restore','restore']) {
-   await page.click('#'+action);
-   await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('保存在内存')||document.querySelector('#status').textContent.includes('回放位置已恢复'),{},{timeout:0});
+   await page.focus('#canvas');await page.keyboard.press(action==='capture'?'a':'z');
+   await page.waitForFunction(()=>ballance.player._BML_WebCheckpointResult()>0,{},{timeout:0});
    const state=await page.evaluate(()=>({result:ballance.player._BML_WebCheckpointResult(),status:document.querySelector('#status').textContent}));
    if(state.result!==(action==='capture'?1:2))throw new Error('UI checkpoint failed: '+JSON.stringify(state));
    await advance(30);
@@ -89,7 +91,7 @@ try{
  await page.evaluate(async()=>{
   ballance.player.FS.writeFile('/user/browser-persistence-check.txt','offline-data-v1');await ballance.persist();
  });
- await page.click('#quit');await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('游戏已退出'),{},{timeout:0});
+ await page.evaluate(()=>ballance.player._BallanceWebRequestQuit());await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('游戏已退出'),{},{timeout:0});
  result.first=await page.evaluate(()=>({frames:ballance.gpu.frames,errors:ballance.gpu.errors,
   files:ballance.player.FS.readdir('/user'),log:ballance.player.FS.readFile('/user/ModLoader/ModLoader.log',{encoding:'utf8'})}));
  if(result.first.errors.length||!result.first.log.includes('Goodbye!'))throw new Error('First session failed orderly shutdown');
@@ -111,7 +113,7 @@ try{
   const key=async k=>{await page.keyboard.down(k);await advance(6);await page.keyboard.up(k);await advance(20)};
   await page.focus('#canvas');await key('Enter');await key('Enter');await advance(180);await key('q');await advance(180);
   for(const action of [1,2,2,1,2,2]) {
-   await key(action===1?'F5':'F8');
+   await key(action===1?'a':'z');
    const state=await page.evaluate(()=>({result:ballance.player._BML_WebCheckpointResult(),status:document.querySelector('#status').textContent}));
    if(state.result!==action)throw new Error('Fast hotkey checkpoint failed: '+JSON.stringify(state));
    await page.keyboard.down('ArrowUp');await advance(30);await page.keyboard.up('ArrowUp');
@@ -123,13 +125,13 @@ try{
  }
  if(result.second.sentinel!=='offline-data-v1'||result.second.errors.length)throw new Error('Offline/persistence failed');
  if(!result.second.maps.includes(mapPath.split('/').pop())||!result.second.tapes.includes(tapePath.split('/').pop()))throw new Error('Imported data lost');
- await page.click('#quit');await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('游戏已退出'),{},{timeout:0});
+ await page.evaluate(()=>ballance.player._BallanceWebRequestQuit());await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('游戏已退出'),{},{timeout:0});
  await Promise.all([page.waitForEvent('load'),page.click('#restart')]);
  await page.waitForFunction(()=>window.ballance?.gpu.frames>=30,{},{timeout:0});
  result.third=await page.evaluate(()=>({running:ballance.running,errors:ballance.gpu.errors,
   sentinel:ballance.player.FS.readFile('/user/browser-persistence-check.txt',{encoding:'utf8'})}));
  if(!result.third.running||result.third.errors.length||result.third.sentinel!=='offline-data-v1')throw new Error('Repeated restart failed');
- await page.click('#quit');await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('游戏已退出'),{},{timeout:0});
+ await page.evaluate(()=>ballance.player._BallanceWebRequestQuit());await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('游戏已退出'),{},{timeout:0});
  result.passed=true;delete result.first.log;
 }catch(error){result.error=String(error.stack||error);process.exitCode=1}
 finally{result.browser=browser.version();result.logs=logs;await writeFile(output,JSON.stringify(result,null,2));console.log(JSON.stringify({...result,logs:undefined}));await browser.close();await new Promise(r=>server.close(r))}

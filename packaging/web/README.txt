@@ -118,16 +118,23 @@ and verified GET response-body bytes, excluding HTTP headers/SSH framing. Progre
 updates per completed file; if wire lengths are unavailable it falls back to file
 counts. These transfer bytes are not browser storage quota measurements.
 
-The page starts the game automatically; audio resumes on the first real click or
+The page installs/verifies its offline resources first, showing encoded-byte
+progress before loading the engine; startup then reads the installed cache rather
+than downloading the assets in parallel a second time. The game starts
+automatically; audio resumes on the first real click or
 keypress if autoplay is blocked. After orderly exit and IDBFS synchronization, a
 centered restart button reloads the cached runtime with saved user data. A failed
 exit save is retried before restart so it cannot silently discard dirty data.
-Map/TAS/data management and the editor share a collapsible right sidebar, hidden
-by default. Desktop layout resizes the game beside it; narrow layouts overlay it.
+The settings sidebar has Display, User Data and TAS Editor tabs; it is hidden by
+default. AA lives in Display. User Data has folder navigation, search, sizes and
+file downloads. Desktop layout resizes the game beside it; narrow layouts overlay
+it. There are no host-level quit/snapshot buttons or hardcoded checkpoint keys.
+The former browser-default F5/F8 pair migrates to A/Z once; other bindings remain
+unchanged. Subsequent bindings are owned entirely by PracticeTools configuration.
 Arrows move the ball; Enter/Esc navigate the game. Rendering follows display refresh independently of
 simulation ticks. Normal play uses WASM native floating point; record playback
 selects the software x87 solver and returns to fast mode when TAS ends.
-F5/F8 capture/restore one in-memory level snapshot; subsequent saves replace it.
+PracticeTools defaults A/Z capture/restore one in-memory level snapshot; subsequent saves replace it.
 Snapshots include game/physics/animation/timer state and, during record playback,
 the playback cursor. They expire on level exit/reset/load or TAS shutdown. They
 are not disk saves, nor Lua VM continuation snapshots: unsupported TAS operations
@@ -194,7 +201,10 @@ Responsive browser viewport
 The canvas now follows the available browser layout automatically, including
 wrapped toolbars and pixel-density changes. Resize does not focus the canvas
 while typing in forms. Presentation uses the full viewport and derives horizontal
-FOV from each authored camera's vertical scale; cameras/physics are unchanged.
+FOV from each authored camera: wider screens preserve vertical FOV, narrower
+screens preserve horizontal FOV and reveal more vertically. Menus/HUD use a
+centered 4:3 rectangle shared by drawing and picking; camera objects and physics
+are unchanged.
 The policy is enabled by PlayerBrowser only; native contexts retain their default.
   node packaging/web/qualify-responsive.mjs /path/to/site /path/to/new-results
 This checks compositor pixels at both edges, submitted geometry projection,
@@ -219,3 +229,17 @@ The status and offline download progress live in the toolbar. The canvas fills
 all remaining viewport space without outer padding; the right tools sidebar
 retains its desktop split/narrow overlay behavior. serve.py defaults to loopback
 port18766; retain that origin when updating so IndexedDB data stays accessible.
+
+WebGPU submission optimization (2026-10-31):
+Reusable staging arenas batch upload calls at each flush; command submission and
+subsequent writes share queue order, with no CPU/GPU waits. GPU resources are not
+part of saved worlds. Vertex attribute mapping is resolved once per draw, before
+the per-vertex copy loop. Pixel/resize and HS02 strict reference/checkpoint tests
+pass. Run profile-browser.mjs URL result.json for disposable real-level CPU/audio
+measurements; do not run competing browser validations during comparative timing.
+The probe compares idle, held arrow with OS-style repeat, and rapid taps. It logs
+Chrome process CPU time, main-thread sampled stacks and audio callback gaps/output
+peaks; it does not prove physical speaker output. The reported M4 Chrome held-key
+audio freeze was not reproduced on the local M5 Pro Chrome156 environment.
+Navigation keys explicitly suppress browser defaults on repeats while all SDL
+key events and held-key sampling remain intact.

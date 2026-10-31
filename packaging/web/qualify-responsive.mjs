@@ -33,6 +33,21 @@ try{
   result.sizes.push(size);return size;
  };
  for(const [width,height] of [[1400,850],[900,850],[650,750],[320,700],[1400,850]]){await page.setViewportSize({width,height});await inspect()}
+ await page.evaluate(()=>{
+  const g=ballance.gpu,original=g.beginDraw.bind(g);window.menuQuads=[];window.menuFrame=-1;
+  g.beginDraw=(...args)=>{
+   if(menuFrame!==g.frames){menuFrame=g.frames;menuQuads=[]}
+   if(args[1])for(let base=0;base+4<=args[4];base+=4){const v=new DataView(args[3].buffer,args[3].byteOffset,args[3].byteLength),xs=[],ys=[];
+    for(let i=0;i<4;++i){xs.push(v.getFloat32((base+i)*256,true));ys.push(v.getFloat32((base+i)*256+4,true))}
+    const x=Math.min(...xs),y=Math.min(...ys),w=Math.max(...xs)-x,h=Math.max(...ys)-y;
+    if(w>100&&h>30&&w/h>2&&w/h<10&&Math.abs(x+w/2-document.querySelector('canvas').clientWidth/2)<10)menuQuads.push({x,y,w,h});
+   }return original(...args);
+  };
+ });
+ await page.setViewportSize({width:1150,height:850});await inspect();const menuA=await page.evaluate(()=>menuQuads);
+ await page.setViewportSize({width:1500,height:850});await inspect();const menuB=await page.evaluate(()=>menuQuads);
+ result.menu={before:menuA,after:menuB};
+ if(menuA.length<5||menuA.length!==menuB.length||menuA.some((a,i)=>Math.abs(a.w-menuB[i].w)>0.1||Math.abs(a.h-menuB[i].h)>0.1))throw new Error('Menu quads stretched with window');
  await page.locator('canvas').screenshot({path:join(out,'wide-menu.png')});
  // A scene restricted to 4:3 leaves both outer canvas bands black. Read actual
  // compositor pixels rather than merely trusting CSS/backbuffer dimensions.
@@ -59,7 +74,7 @@ try{
    return original(group,binding,bytes);
   };
  });
- await page.setViewportSize({width:1000,height:850});const narrow=await inspect();const before=await page.evaluate(()=>projectionDraws);
+ await page.setViewportSize({width:1150,height:850});const narrow=await inspect();const before=await page.evaluate(()=>projectionDraws);
  await page.setViewportSize({width:1500,height:850});const wide=await inspect();const after=await page.evaluate(()=>projectionDraws);
  if(narrow.css[1]!==wide.css[1])throw new Error('Projection fixture needs equal heights');
  // Recover projection from the actual submitted MVP and model-view uniforms;
@@ -79,23 +94,30 @@ try{
  if(!before.length||!after.length)throw new Error('No 3D matrices captured');
  // Level 1's sky callback deliberately interpolates FOV toward PI. Test the
  // modal projection of actual level geometry, not that separate sky effect.
- const geometryProjection=draws=>{
+ const geometryProjection=(draws,minDraws=20)=>{
   const groups=new Map();for(const values of draws){let p;try{p=projection(values)}catch{continue}
    const key=p[0][0].toFixed(3)+':'+p[1][1].toFixed(3),group=groups.get(key)??{matrix:p,count:0};++group.count;groups.set(key,group);
   }
   const modal=[...groups.values()].sort((a,b)=>b.count-a.count)[0];
-  if(!modal||modal.count<20||modal.count<=draws.length/2)throw new Error('No dominant level geometry projection');return modal;
+  if(!modal||modal.count<minDraws||modal.count<=draws.length/2)throw new Error('No dominant level geometry projection');return modal;
  };
  const first=geometryProjection(before),second=geometryProjection(after),a=first.matrix,b=second.matrix;
  result.projection={before:a,after:b,geometryDraws:[first.count,second.count]};
  if(Math.abs(a[0][0]*narrow.css[0]-b[0][0]*wide.css[0])>Math.abs(a[0][0]*narrow.css[0])*1e-4)throw new Error('Horizontal FOV does not expand');
  if(Math.abs(a[1][1]-b[1][1])>Math.abs(a[1][1])*1e-4)throw new Error('Vertical FOV changed');
  await page.locator('canvas').screenshot({path:join(out,'wide-paused-level.png')});
+ await page.setViewportSize({width:600,height:850});const portrait=await inspect();const portraitP=geometryProjection(await page.evaluate(()=>projectionDraws),5).matrix;
+ await page.setViewportSize({width:600,height:1050});const taller=await inspect();const tallerP=geometryProjection(await page.evaluate(()=>projectionDraws),5).matrix;
+ result.portrait={before:portraitP,after:tallerP};
+ if(Math.abs(portraitP[0][0]-tallerP[0][0])>1e-4||tallerP[1][1]>=portraitP[1][1])throw new Error('Portrait view cropped instead of expanding vertically');
+ await page.locator('canvas').screenshot({path:join(out,'portrait-paused-level.png')});
+ await page.setViewportSize({width:1500,height:850});await inspect();
+
  // Resizing must not focus the game while someone edits a form.
  await page.click('#toggle-sidebar');
  const sidebarSize=await inspect();
  if(sidebarSize.css[0]>=wide.css[0]-300)throw new Error('Desktop sidebar did not reserve space');
- await page.locator('#editor summary').click();await page.focus('#copy-name');await page.setViewportSize({width:1200,height:800});
+ await page.click('#tab-editor');await page.focus('#copy-name');await page.setViewportSize({width:1200,height:800});
  if((await inspect()).focus!=='copy-name')throw new Error('Resize stole keyboard focus');
  const cdp=await page.context().newCDPSession(page);await cdp.send('Emulation.setDeviceMetricsOverride',{width:1200,height:800,deviceScaleFactor:1,mobile:false});
  // CDP changes resolution values but emits neither resize nor media change.
@@ -118,7 +140,7 @@ try{
  if(String(mobileClosed.css)!==String(mobileOpen.css))throw new Error('Narrow sidebar squeezed game viewport');
  await page.screenshot({path:join(out,'sidebar-narrow.png')});
  await page.click('#close-sidebar');await inspect();
- await page.click('#quit');await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('游戏已退出'),{},{timeout:0});
+ await page.evaluate(()=>ballance.player._BallanceWebRequestQuit());await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('游戏已退出'),{},{timeout:0});
  result.passed=true;
 }catch(e){result.error=String(e.stack||e);process.exitCode=1;try{result.log=await page.evaluate(()=>ballance.player.FS.readFile('/user/Player.log',{encoding:'utf8'}));await page.screenshot({path:join(out,'failure.png')})}catch{}}
 finally{result.browser=browser.version();await writeFile(join(out,'result.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result));await browser.close();await new Promise(r=>server.close(r))}

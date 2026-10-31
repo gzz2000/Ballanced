@@ -6,7 +6,7 @@
   "external_sources": {
     "BallanceModLoaderPlus": {
       "repository": "https://github.com/gzz2000/BallanceModLoaderPlus.git",
-      "commit": "e94e70852b9d158bc8d047983cd39e1a1041ac12",
+      "commit": "27cd03220a3bc530786f7f07aba2481f545d8c0b",
       "branch": "web-port"
     },
     "BallanceTAS": {
