@@ -4,6 +4,7 @@ import argparse,gzip,hashlib,json,pathlib,shutil
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--player',type=pathlib.Path,required=True)
 p.add_argument('--shaders',type=pathlib.Path,required=True)
+p.add_argument('--gl-shaders',type=pathlib.Path,required=True)
 p.add_argument('--game',type=pathlib.Path,required=True)
 p.add_argument('--template-user',type=pathlib.Path,required=True)
 p.add_argument('--bml-source',type=pathlib.Path,required=True)
@@ -15,7 +16,9 @@ def copy(source,name):
 for name in ('index.html','app.mjs','style.css','tas-grid.mjs','share-links.mjs'):copy(here/'host'/name,name)
 copy(a.player,'PlayerBrowser.mjs');copy(a.player.with_suffix('.wasm'),'PlayerBrowser.wasm')
 copy(a.shaders,'shaders.json')
-copy(here/'../../Source/RenderEngine/src/CKRasterizer/CKWebGpuRasterizer/webgpu.mjs','webgpu.mjs')
+copy(a.gl_shaders,'shaders-gl.json')
+for name in ('webgpu.mjs','webgl2.mjs','renderer.mjs'):
+    copy(here/'../../Source/RenderEngine/src/CKRasterizer/CKWebGpuRasterizer'/name,name)
 assets=[]
 def asset(source,vfs,default=False):
     name=f'assets/{len(assets):04d}.bin';path=copy(source,name)
@@ -40,7 +43,7 @@ for file in files:
 # denominator even when a CDN uses chunked HTTP compression without lengths.
 # Originals stay available for hosts/tests without Service Worker control.
 packs=[];group=[];group_size=0
-packed=[f for f in files if f['url'].startswith('assets/') or f['url'] in ('PlayerBrowser.wasm','shaders.json')]
+packed=[f for f in files if f['url'].startswith('assets/') or f['url'] in ('PlayerBrowser.wasm','shaders.json','shaders-gl.json')]
 def flush_pack():
     if not group:return
     raw=b''.join((out/f['url']).read_bytes() for f in group)

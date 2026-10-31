@@ -1,6 +1,6 @@
 import {startShareLinks} from './share-links.mjs';
 import {createTASGrid} from './tas-grid.mjs';
-import {createBallanceGpu} from './webgpu.mjs';
+import {createBallanceRenderer} from './renderer.mjs';
 const $=id=>document.getElementById(id);
 // Automatic startup may precede permission to play audio. Resume the existing
 // SDL context on a real gesture without delaying the game behind a start button.
@@ -165,7 +165,9 @@ async function startGame(){
         await cachePreparation;
         status('正在启动游戏…');$('loading-status').textContent='正在启动游戏…';
         const manifest=await(await fetch('./assets.json')).json();
-        gpu=await createBallanceGpu($('canvas'),await(await fetch('./shaders.json')).json());
+        gpu=await createBallanceRenderer($('canvas'),{backend:new URLSearchParams(location.search).get('renderer')||'auto'});
+        $('solver-status').title='渲染器：'+(gpu.backend==='webgl2'?'WebGL2':'WebGPU');
+        $('renderer-status').textContent='当前渲染器：'+(gpu.backend==='webgl2'?'WebGL2':'WebGPU');
         const {default:createPlayer}=await import('./PlayerBrowser.mjs');
         player=await createPlayer({canvas:$('canvas'),ballanceGpu:gpu,
             print:line=>console.log(line),printErr:line=>console.error(line),

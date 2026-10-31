@@ -1,7 +1,7 @@
-Ballanced WebAssembly / WebGPU
+Ballanced WebAssembly / WebGPU / WebGL2
 =============================
 One shared engine builds three hosts: Node (Player.js), headless browser Worker
-(PlayerWeb.mjs), and interactive WebGPU (PlayerBrowser.mjs). CK2, BuildingBlocks /
+(PlayerWeb.mjs), and interactive WebGPU/WebGL2 (PlayerBrowser.mjs). CK2, BuildingBlocks /
 IVP, BML Plus, BallanceTAS, LegacyTASRuntime and PracticeTools are linked statically.
 Node uses NODERAWFS for isolated reference tests. The interactive host uses MEMFS,
 IDBFS user persistence and a yielding requestAnimationFrame loop.
@@ -101,11 +101,12 @@ implemented. These are not claims of full rasterizer API compatibility.
 Offline browser distribution (stage 4)
 --------------------------------------
   python3 packaging/web/package-browser.py --player /path/to/PlayerBrowser.mjs \
-    --shaders /path/to/generated/shaders.json --game /path/to/game \
+    --shaders /path/to/generated/shaders.json --gl-shaders /path/to/shaders-gl.json \
+    --game /path/to/game \
     --template-user /path/to/clean-user --bml-source /path/to/BallanceModLoaderPlus \
     --output /path/to/new-site
   python3 packaging/web/serve.py --port 18766 --bind 127.0.0.1 --directory /path/to/new-site
-Open http://127.0.0.1:18766 in a WebGPU browser. A remote deployment needs HTTPS.
+Open http://127.0.0.1:18766 in a WebGPU or WebGL2 browser. A remote deployment needs HTTPS.
 Use a stable hostname/port: browser data belongs to that origin. file:// cannot
 provide WebGPU/offline service worker support. The output includes your game
 assets (~162 MB in our fixture); proprietary assets are not committed here.
@@ -367,3 +368,50 @@ but normal offline installation fetches only the packs, not those loose copies.
 qualify-cache-progress.mjs SITE RESULT simulates delayed chunked pack responses,
 asserts zero HEAD/loose-asset network requests and progress before the first pack
 finishes, then reopens offline. qualify-updates also corrupts a pack to verify rollback.
+
+WebGL2 compatibility renderer (2026-11-01)
+------------------------------------------
+The host prefers WebGPU, automatically choosing WebGL2 if navigator.gpu is
+absent, requestAdapter returns null/rejects, or requestDevice fails. Context
+selection happens only after device acquisition (canvas context types cannot
+be changed). ?renderer=webgl2 forces the fallback; ?renderer=webgpu disables
+fallback for diagnostics. Settings / Display shows the selected backend.
+WebGL1 is not supported. If both APIs are disabled, graphics acceleration/driver
+support is still required. This is not a software renderer or a mobile touch UI.
+
+Generate the additional shader asset with SPIRV-Cross 1.4.363.0:
+  python3 Source/RenderEngine/src/CKRasterizer/CKWebGpuRasterizer/shaders/compile_gl_shaders.py \
+    --spirv-grammar /path/to/spirv.core.grammar.json --output /path/to/shaders-gl.json
+The shader source is the same verified native SPIR-V pack, using the existing
+LOD-derivative lowering. GLSL 330 is an intermediate; the generator targets
+GLSL ES 3.00, fixes clip depth, matches varying names and substitutes actual
+allocated mip counts for textureQueryLevels. Uniform data/texture slots keep
+the CKFFPLib ABI. All six vertex/fragment combinations compile/link at startup.
+
+WebGL2 implements depth/stencil/blend/scissor, compact/default vertex attributes,
+2D/cube/volume textures and 1x/4x MSAA (limited by supported sample counts).
+Resolve first to RGBA8, then present opaque RGB: a direct multisample blit to
+an RGB default framebuffer is illegal on some drivers. Both renderer modules
+and shader packs are included in the atomic offline cache. The selected shader
+set is loaded by the host; simulation/WASM/fast-x87 mode selection is unchanged.
+
+Acceptance helpers (npm ci first; Chrome executable as in other local tests):
+  node packaging/web/qualify-webgl.mjs http://127.0.0.1:18766/ /path/to/results
+  node packaging/web/qualify-backends.mjs http://127.0.0.1:18766/ /path/to/pixel-results
+  BALLANCE_TEST_WEBGL=1 node packaging/web/qualify-responsive.mjs /path/to/site /path/to/results
+  BALLANCE_TEST_WEBGL=1 BALLANCE_TEST_EDITOR=1 BALLANCE_TEST_FAST_CHECKPOINTS=1 \
+    node packaging/web/qualify-offline.mjs /path/to/site result.json /path/to/map.nmo /path/to/record.tas
+The last two simulate a blocked WebGPU adapter, exercising automatic fallback
+instead of an explicit renderer override. Pixel comparison replays the exact
+same captured game frame in both backends; small GPU filtering/rasterization
+rounding differences are allowed. Windows VM/Android hardware remain untested
+locally; the local forced fallback does not certify their drivers.
+
+WebGL2 local acceptance: Chrome156/Apple GPU, missing API/null adapter/device
+rejection fallback pass; 1x/4x clear/resize pixels pass. Identical menu/level
+frame replays against WebGPU averaged 0.0054..0.0764 RGB levels of255 difference.
+HS01_4740_1.30.344_264_口语大赛_onlyforyou finished without death, stopped playback
+and returned to fast mode. Auto-fallback offline start/audio, map/TAS persistence,
+editor roundtrip, six fast checkpoints and two offline restarts passed. Responsive
+20-size/DPR/mouse/pause/sidebar checks and old-cache upgrade/rollback passed.
+These checks do not rerun or extend the historical full trajectory corpus.

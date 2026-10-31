@@ -15,6 +15,8 @@ const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/A
 const result={passed:false,sizes:[]};let page;
 try{
  page=await browser.newPage({viewport:{width:1400,height:850},deviceScaleFactor:2});
+ if(process.env.BALLANCE_TEST_WEBGL==='1')await page.addInitScript(()=>Object.defineProperty(navigator,'gpu',{value:{requestAdapter:async()=>null}}));
+
  await page.addInitScript(()=>{
   const original=window.matchMedia.bind(window);window.densityQueries=[];
   window.matchMedia=query=>{const result=original(query);if(query.includes('resolution'))densityQueries.push(result);return result};

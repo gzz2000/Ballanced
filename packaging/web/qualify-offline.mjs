@@ -18,6 +18,8 @@ const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/A
 const result={passed:false},logs=[];
 try{
  const context=await browser.newContext(),page=await context.newPage();
+
+ if(process.env.BALLANCE_TEST_WEBGL==='1')await page.addInitScript(()=>Object.defineProperty(navigator,'gpu',{value:{requestAdapter:async()=>null}}));
  await page.addInitScript(()=>{
   window.cacheTransfers=[];
   navigator.serviceWorker?.addEventListener('message',event=>{
@@ -92,7 +94,7 @@ try{
   ballance.player.FS.writeFile('/user/browser-persistence-check.txt','offline-data-v1');await ballance.persist();
  });
  await page.evaluate(()=>ballance.player._BallanceWebRequestQuit());await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('游戏已退出'),{},{timeout:0});
- result.first=await page.evaluate(()=>({frames:ballance.gpu.frames,errors:ballance.gpu.errors,
+ result.first=await page.evaluate(()=>({backend:ballance.gpu.backend,frames:ballance.gpu.frames,errors:ballance.gpu.errors,
   files:ballance.player.FS.readdir('/user'),log:ballance.player.FS.readFile('/user/ModLoader/ModLoader.log',{encoding:'utf8'})}));
  if(result.first.errors.length||!result.first.log.includes('Goodbye!'))throw new Error('First session failed orderly shutdown');
  result.restart=await page.evaluate(()=>{
@@ -105,7 +107,7 @@ try{
  await Promise.all([page.waitForEvent('load'),page.click('#restart')]);
  await page.waitForFunction(()=>document.querySelector('#offline').textContent.includes('离线缓存已就绪'),{},{timeout:0});
  await page.waitForFunction(()=>window.ballance?.gpu.frames>=30,{},{timeout:0});
- result.second=await page.evaluate(()=>({frames:ballance.gpu.frames,errors:ballance.gpu.errors,
+ result.second=await page.evaluate(()=>({backend:ballance.gpu.backend,frames:ballance.gpu.frames,errors:ballance.gpu.errors,
   sentinel:ballance.player.FS.readFile('/user/browser-persistence-check.txt',{encoding:'utf8'}),
   maps:ballance.player.FS.readdir('/user/ModLoader/Maps'),tapes:ballance.player.FS.readdir('/user/ModLoader/TAS')}));
  if(process.env.BALLANCE_TEST_FAST_CHECKPOINTS==='1') {
@@ -132,6 +134,7 @@ try{
   sentinel:ballance.player.FS.readFile('/user/browser-persistence-check.txt',{encoding:'utf8'})}));
  if(!result.third.running||result.third.errors.length||result.third.sentinel!=='offline-data-v1')throw new Error('Repeated restart failed');
  await page.evaluate(()=>ballance.player._BallanceWebRequestQuit());await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('游戏已退出'),{},{timeout:0});
+ if(process.env.BALLANCE_TEST_WEBGL==='1'&&(result.first.backend!=='webgl2'||result.second.backend!=='webgl2'))throw Error('Expected WebGL2 fallback online and offline');
  result.passed=true;delete result.first.log;
 }catch(error){result.error=String(error.stack||error);process.exitCode=1}
 finally{result.browser=browser.version();result.logs=logs;await writeFile(output,JSON.stringify(result,null,2));console.log(JSON.stringify({...result,logs:undefined}));await browser.close();await new Promise(r=>server.close(r))}
