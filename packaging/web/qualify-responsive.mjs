@@ -21,7 +21,7 @@ try{
  });
  page.on('pageerror',e=>console.error(e));
 
- await page.goto('http://127.0.0.1:'+server.address().port);await page.click('#start');
+ await page.goto('http://127.0.0.1:'+server.address().port);
  await page.waitForFunction(()=>window.ballance?.gpu.frames>30,{},{timeout:0});
  const advance=async n=>{const t=await page.evaluate(n=>ballance.gpu.frames+n,n);await page.waitForFunction(t=>ballance.gpu.frames>=t,t,{timeout:0})};
  const key=async k=>{await page.keyboard.down(k);await advance(6);await page.keyboard.up(k);await advance(20)};
@@ -91,6 +91,9 @@ try{
  if(Math.abs(a[1][1]-b[1][1])>Math.abs(a[1][1])*1e-4)throw new Error('Vertical FOV changed');
  await page.locator('canvas').screenshot({path:join(out,'wide-paused-level.png')});
  // Resizing must not focus the game while someone edits a form.
+ await page.click('#toggle-sidebar');
+ const sidebarSize=await inspect();
+ if(sidebarSize.css[0]>=wide.css[0]-300)throw new Error('Desktop sidebar did not reserve space');
  await page.locator('#editor summary').click();await page.focus('#copy-name');await page.setViewportSize({width:1200,height:800});
  if((await inspect()).focus!=='copy-name')throw new Error('Resize stole keyboard focus');
  const cdp=await page.context().newCDPSession(page);await cdp.send('Emulation.setDeviceMetricsOverride',{width:1200,height:800,deviceScaleFactor:1,mobile:false});
@@ -107,6 +110,13 @@ try{
  await page.evaluate(()=>{const original=ballance.player._BallanceWebResize;window.resizeCalls=0;ballance.player._BallanceWebResize=(...args)=>{++resizeCalls;return original(...args)}});
  await advance(60);result.idleResizeCalls=await page.evaluate(()=>resizeCalls);
  if(result.idleResizeCalls!==0)throw new Error('Resize feedback loop while layout is idle');
+ await page.keyboard.press('Escape');await inspect();
+ if(await page.locator('#sidebar').isVisible())throw new Error('Escape did not close sidebar');
+ await page.setViewportSize({width:650,height:750});const mobileClosed=await inspect();
+ await page.click('#toggle-sidebar');const mobileOpen=await inspect();
+ if(String(mobileClosed.css)!==String(mobileOpen.css))throw new Error('Narrow sidebar squeezed game viewport');
+ await page.screenshot({path:join(out,'sidebar-narrow.png')});
+ await page.click('#close-sidebar');await inspect();
  await page.click('#quit');await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('游戏已退出'),{},{timeout:0});
  result.passed=true;
 }catch(e){result.error=String(e.stack||e);process.exitCode=1;try{result.log=await page.evaluate(()=>ballance.player.FS.readFile('/user/Player.log',{encoding:'utf8'}));await page.screenshot({path:join(out,'failure.png')})}catch{}}

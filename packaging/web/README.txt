@@ -109,9 +109,18 @@ Open http://127.0.0.1:18766 in a WebGPU browser. A remote deployment needs HTTPS
 Use a stable hostname/port: browser data belongs to that origin. file:// cannot
 provide WebGPU/offline service worker support. The output includes your game
 assets (~162 MB in our fixture); proprietary assets are not committed here.
+The example Python HTTP server does not enable transport compression. Production
+hosting can enable gzip/Brotli Content-Encoding (and Vary: Accept-Encoding); fetch
+and cache integrity checks operate on decoded bytes. A ZIP download does not
+enable HTTP compression. Do not confuse transfer bytes with browser cache quota.
 
-The page waits for a user gesture to initialize GPU/audio. Arrows move the ball;
-Enter/Esc navigate the game. Rendering follows display refresh independently of
+The page starts the game automatically; audio resumes on the first real click or
+keypress if autoplay is blocked. After orderly exit and IDBFS synchronization, a
+centered restart button reloads the cached runtime with saved user data. A failed
+exit save is retried before restart so it cannot silently discard dirty data.
+Map/TAS/data management and the editor share a collapsible right sidebar, hidden
+by default. Desktop layout resizes the game beside it; narrow layouts overlay it.
+Arrows move the ball; Enter/Esc navigate the game. Rendering follows display refresh independently of
 simulation ticks. Normal play uses WASM native floating point; record playback
 selects the software x87 solver and returns to fast mode when TAS ends.
 F5/F8 capture/restore one in-memory level snapshot; subsequent saves replace it.
@@ -192,3 +201,12 @@ BALLANCE_TEST_RESIZE=1 with qualify-browser-corpus.py exercises repeated drawabl
 resizes during reference playback and (with --snapshots) cursor/world restoration.
 Latest resize-specific gate: HS02_5885 control +3captures/6restores passed; this is
 one additional case, not a claim that the full corpus was rerun for this patch.
+
+Automatic startup/sidebar qualification (2026-10-31):
+Chrome 156 with document-user-activation-required starts real WebGPU frames with
+no user activation; suspended audio resumes on the first key. The normal exit
+button saves IDBFS and shows a geometrically centered restart button. Two offline
+restarts retain imported maps, TAS and a sentinel; editor edit/undo/save preserves
+the decompressed recording. Responsive qualification also checks desktop sidebar
+space reservation, Esc closing, narrow-screen overlay, DPR changes and no idle
+resize loop. This host-only iteration did not rerun the full TAS corpus.

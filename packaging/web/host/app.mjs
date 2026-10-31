@@ -1,11 +1,23 @@
 import {createBallanceGpu} from './webgpu.mjs';
 const $=id=>document.getElementById(id);
+// Automatic startup may precede permission to play audio. Resume the existing
+// SDL context on a real gesture without delaying the game behind a start button.
+function resumeAudio(){
+    const audio=player?.SDL3?.audioContext;
+    if(audio?.state==='suspended')void audio.resume().catch(console.error);
+}
+for(const type of ['pointerdown','keydown'])window.addEventListener(type,resumeAudio,true);
 // SDL listens on window. Form typing must not become game input, but key-up
 // still reaches SDL so a held game key released over a form cannot get stuck.
 for(const type of ['keydown','keypress'])window.addEventListener(type,event=>{
-    if(event.target!==$('canvas'))event.stopImmediatePropagation();
+    if(event.target!==$('canvas')){
+        if(type==='keydown'&&event.key==='Escape'&&!$('sidebar').hidden&&$('sidebar').contains(event.target)){
+            event.preventDefault();setSidebar(false);
+        }
+        event.stopImmediatePropagation();
+    }
 },true);
-let player,gpu,running=false,userReady=false,syncTail=Promise.resolve(),timer;
+let player,gpu,running=false,userReady=false,syncTail=Promise.resolve(),timer,restartNeedsSave=false;
 const status=text=>{$('status').textContent=text};
 const storage=text=>{$('storage').textContent=text};
 const sync=()=>{
@@ -76,6 +88,13 @@ function watchDensity(){
     scheduleResize();
 }
 watchDensity();
+function setSidebar(open){
+    $('sidebar').hidden=!open;document.body.classList.toggle('sidebar-open',open);
+    $('toggle-sidebar').setAttribute('aria-expanded',String(open));
+    if(open)$('close-sidebar').focus();else if(running)$('canvas').focus();else $('toggle-sidebar').focus();
+}
+$('toggle-sidebar').onclick=()=>setSidebar($('sidebar').hidden);
+$('close-sidebar').onclick=()=>setSidebar(false);
 async function importFiles(input,directory,extension){
     try{
         for(const file of input.files){
@@ -88,18 +107,24 @@ async function importFiles(input,directory,extension){
         await persist();status('导入完成。请从游戏的地图或 TAS 菜单选择文件。');
     }catch(error){storage('导入失败：'+error.message)}finally{input.value=''}
 }
-$('start').onclick=async()=>{
-    $('start').disabled=true;status('正在加载游戏…');
+function showRestart(message){
+    running=false;clearInterval(timer);
+    for(const id of ['quit','capture','restore','load-record','inspect','apply','undo','save-record','play-record'])$(id).disabled=true;
+    $('stage').classList.add('ended');$('restart-screen').hidden=false;status(message);
+}
+async function startGame(){
+    status('正在加载游戏…');
     try{
         const manifest=await(await fetch('./assets.json')).json();
         gpu=await createBallanceGpu($('canvas'),await(await fetch('./shaders.json')).json());
         const {default:createPlayer}=await import('./PlayerBrowser.mjs');
         player=await createPlayer({canvas:$('canvas'),ballanceGpu:gpu,
             print:line=>console.log(line),printErr:line=>console.error(line),
-            onAbort:reason=>status('游戏运行失败：'+reason),
+            onAbort:reason=>showRestart('游戏运行失败：'+reason),
             onBallanceExit:async()=>{
                 running=false;clearInterval(timer);$('quit').disabled=true;
-                await persist();status('游戏已退出，数据已保存。重新加载页面可以再次启动。');
+                try{await persist();showRestart('游戏已退出，数据已保存。')}
+                catch(error){restartNeedsSave=true;showRestart('游戏已退出，但保存失败：'+error.message+'。重新开始时将重试保存。')}
             }});
         player.FS.mkdirTree('/user');player.FS.mount(player.IDBFS,{},'/user');
         await new Promise((resolve,reject)=>player.FS.syncfs(true,error=>error?reject(error):resolve()));
@@ -123,7 +148,16 @@ $('start').onclick=async()=>{
         await persist();status('方向键移动，Enter 确认，Esc 暂停。');$('canvas').focus();
         // Keep introspection available for local acceptance tests and diagnostics.
         window.ballance={player,gpu,get running(){return running},persist};
-    }catch(error){status('无法启动：'+error.message);console.error(error)}
+    }catch(error){showRestart('无法启动：'+error.message);console.error(error)}
+}
+$('restart').onclick=async()=>{
+    $('restart').disabled=true;
+    try{
+        if(restartNeedsSave)await persist();
+        // A fresh document also releases the old Wasm heap, GPU and SDL handlers.
+        // The service worker serves the runtime offline; IDBFS retains user data.
+        location.reload();
+    }catch(error){status('保存失败，请重试：'+error.message);$('restart').disabled=false}
 };
 $('quit').onclick=()=>{if(running){$('quit').disabled=true;player._BallanceWebRequestQuit()}};
 $('samples').onchange=()=>gpu?.setSamples(Number($('samples').value));
@@ -135,12 +169,14 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&userReady)
 // An active worker means every versioned game/runtime asset was cached and
 // checked successfully. A failed install never replaces the previous version.
 if('serviceWorker' in navigator){
+    let cacheReady=false;
     navigator.serviceWorker.addEventListener('message',event=>{
         if(event.data?.cacheError)$('offline').textContent='离线缓存失败：'+event.data.cacheError;
-        else if(event.data?.cacheProgress)$('offline').textContent='正在缓存离线资源：'+event.data.cacheProgress+'/'+event.data.total;
+        else if(event.data?.cacheProgress&&!cacheReady)$('offline').textContent='正在缓存离线资源：'+event.data.cacheProgress+'/'+event.data.total;
     });
     navigator.serviceWorker.register('./sw.js').then(async registration=>{
         const ready=await navigator.serviceWorker.ready;
+        cacheReady=true; // Queued install progress must not overwrite readiness.
         $('offline').textContent='离线缓存已就绪。下次可在没有网络时打开此页面。';
         if(registration.waiting)$('offline').textContent+=' 新版本将在关闭本网站所有页面后启用。';
         const persistent=await navigator.storage?.persist?.();
@@ -160,7 +196,7 @@ function refreshRecords(){
         const option=document.createElement('option');option.value=file.path;option.textContent=file.path.split('/').pop();$('records').append(option);
     }
     if([...$('records').options].some(o=>o.value===previous))$('records').value=previous;
-    $('load-record').disabled=$('play-record').disabled=!$('records').value;
+    $('load-record').disabled=$('play-record').disabled=!running||!$('records').value;
 }
 const call=(name,types=[],args=[],result='number')=>player.ccall('BML_WebTAS'+name,result,types,args);
 const error=()=>call('Error',[],[],'string');
@@ -212,3 +248,4 @@ window.addEventListener('keydown',event=>{
         event.preventDefault();event.stopImmediatePropagation();void checkpoint(event.code==='F5'?1:2);
     }
 },true);
+void startGame();

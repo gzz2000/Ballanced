@@ -14,15 +14,28 @@ const server=createServer(async(req,res)=>{try{
  createReadStream(path).pipe(res);
 }catch{res.writeHead(404).end()}});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
-const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
+const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,args:['--autoplay-policy=document-user-activation-required']});
 const result={passed:false},logs=[];
 try{
  const context=await browser.newContext(),page=await context.newPage();
  page.on('console',message=>{logs.push(message.text());if(message.type()==='error')console.error(message.text())});page.on('pageerror',error=>logs.push('PAGE ERROR '+error));
  await page.goto('http://127.0.0.1:'+server.address().port);
- await page.waitForFunction(()=>document.querySelector('#offline').textContent.includes('离线缓存已就绪'),{},{timeout:0});
- await page.click('#start');
- await page.waitForFunction(()=>window.ballance?.gpu.frames>=30,{},{timeout:0});
+ // Playwright evaluate grants a CDP user gesture. Observe startup without that
+ // synthetic activation so the autoplay-policy test is meaningful.
+ const cdp=await context.newCDPSession(page);
+ for(;;){
+  const {result:probe}=await cdp.send('Runtime.evaluate',{userGesture:false,returnByValue:true,expression:`({
+   ready:window.ballance?.gpu.frames>=30&&document.querySelector('#offline').textContent.includes('离线缓存已就绪'),
+   activated:navigator.userActivation.hasBeenActive,audio:window.ballance?.player.SDL3?.audioContext?.state,
+   startButtons:document.querySelectorAll('#start').length,restartHidden:document.querySelector('#restart-screen').hidden})`});
+  if(probe.value.ready){result.autostart=probe.value;break}
+  await new Promise(r=>setTimeout(r,100));
+ }
+ if(result.autostart.activated||result.autostart.startButtons||!result.autostart.restartHidden)throw new Error('Game did not start without user activation');
+ await page.keyboard.press('Shift');
+ await page.waitForFunction(()=>ballance.player.SDL3?.audioContext?.state==='running',{},{timeout:10000});
+ result.audioAfterGesture='running';
+ await page.click('#toggle-sidebar');
  await page.locator('#maps').setInputFiles(mapPath);await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('导入完成'),{},{timeout:0});
  await page.evaluate(()=>document.querySelector('#status').textContent='Testing next import');
  await page.locator('#tapes').setInputFiles(tapePath);await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('导入完成'),{},{timeout:0});
@@ -71,9 +84,16 @@ try{
  result.first=await page.evaluate(()=>({frames:ballance.gpu.frames,errors:ballance.gpu.errors,
   files:ballance.player.FS.readdir('/user'),log:ballance.player.FS.readFile('/user/ModLoader/ModLoader.log',{encoding:'utf8'})}));
  if(result.first.errors.length||!result.first.log.includes('Goodbye!'))throw new Error('First session failed orderly shutdown');
- await context.setOffline(true);await page.reload();
+ result.restart=await page.evaluate(()=>{
+  const a=document.querySelector('#stage').getBoundingClientRect(),b=document.querySelector('#restart').getBoundingClientRect();
+  return {offset:[b.x+b.width/2-a.x-a.width/2,b.y+b.height/2-a.y-a.height/2],hidden:document.querySelector('#restart-screen').hidden};
+ });
+ if(result.restart.hidden||result.restart.offset.some(n=>Math.abs(n)>1))throw new Error('Restart is not centered in game stage');
+ await page.screenshot({path:output.replace(/\.json$/, '-restart.png')});
+ await context.setOffline(true);
+ await Promise.all([page.waitForEvent('load'),page.click('#restart')]);
  await page.waitForFunction(()=>document.querySelector('#offline').textContent.includes('离线缓存已就绪'),{},{timeout:0});
- await page.click('#start');await page.waitForFunction(()=>window.ballance?.gpu.frames>=30,{},{timeout:0});
+ await page.waitForFunction(()=>window.ballance?.gpu.frames>=30,{},{timeout:0});
  result.second=await page.evaluate(()=>({frames:ballance.gpu.frames,errors:ballance.gpu.errors,
   sentinel:ballance.player.FS.readFile('/user/browser-persistence-check.txt',{encoding:'utf8'}),
   maps:ballance.player.FS.readdir('/user/ModLoader/Maps'),tapes:ballance.player.FS.readdir('/user/ModLoader/TAS')}));
@@ -94,6 +114,12 @@ try{
  }
  if(result.second.sentinel!=='offline-data-v1'||result.second.errors.length)throw new Error('Offline/persistence failed');
  if(!result.second.maps.includes(mapPath.split('/').pop())||!result.second.tapes.includes(tapePath.split('/').pop()))throw new Error('Imported data lost');
+ await page.click('#quit');await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('游戏已退出'),{},{timeout:0});
+ await Promise.all([page.waitForEvent('load'),page.click('#restart')]);
+ await page.waitForFunction(()=>window.ballance?.gpu.frames>=30,{},{timeout:0});
+ result.third=await page.evaluate(()=>({running:ballance.running,errors:ballance.gpu.errors,
+  sentinel:ballance.player.FS.readFile('/user/browser-persistence-check.txt',{encoding:'utf8'})}));
+ if(!result.third.running||result.third.errors.length||result.third.sentinel!=='offline-data-v1')throw new Error('Repeated restart failed');
  await page.click('#quit');await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('游戏已退出'),{},{timeout:0});
  result.passed=true;delete result.first.log;
 }catch(error){result.error=String(error.stack||error);process.exitCode=1}

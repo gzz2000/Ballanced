@@ -1,13 +1,17 @@
 <!doctype html>
 <html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ballance</title><link rel="stylesheet" href="style.css">
-<header><strong>Ballance</strong><button id="start">开始游戏</button><button id="quit" disabled>退出并保存</button>
+<header><strong>Ballance</strong><button id="quit" disabled>退出并保存</button>
 <button id="capture" disabled>保存状态 F5</button><button id="restore" disabled>恢复状态 F8</button>
-<label>抗锯齿 <select id="samples"><option value="4">4× MSAA</option><option value="1">关闭</option></select></label></header>
-<main><div id="stage"><canvas id="canvas" tabindex="0" width="640" height="480" aria-label="Ballance 游戏画面"></canvas></div>
-<p id="status" role="status">准备就绪。方向键、Enter 和 Esc 操作游戏。</p>
+<label>抗锯齿 <select id="samples"><option value="4">4× MSAA</option><option value="1">关闭</option></select></label>
+<button id="toggle-sidebar" aria-controls="sidebar" aria-expanded="false">地图与 TAS</button></header>
+<main><section id="game-pane"><div id="stage"><canvas id="canvas" tabindex="0" width="640" height="480" aria-label="Ballance 游戏画面"></canvas>
+<div id="restart-screen" hidden><button id="restart">重新开始</button></div></div>
+<p id="status" role="status">正在加载游戏…</p>
 <p id="offline" role="status">正在准备离线缓存…</p>
-<details><summary>地图、TAS 与用户数据</summary>
+</section><aside id="sidebar" aria-labelledby="sidebar-title" hidden>
+<div class="sidebar-heading"><h2 id="sidebar-title">地图与 TAS</h2><button id="close-sidebar" aria-label="收起侧栏">收起</button></div>
+<details open><summary>地图、TAS 与用户数据</summary>
 <p>数据保存在当前浏览器。清除网站数据会删除存档；可以下载文件备份。</p>
 <label class="button">导入地图 <input id="maps" type="file" accept=".nmo" multiple disabled></label>
 <label class="button">导入 TAS <input id="tapes" type="file" accept=".tas" multiple disabled></label>
@@ -24,4 +28,4 @@
 <p><label>回放关卡 <select id="level"></select></label><button id="play-record" disabled>回放已保存录像</button></p>
 <p id="editor-status" role="status"></p><pre id="preview"></pre>
 </details>
-</main><script type="module" src="app.mjs"></script></html>
+</aside></main><script type="module" src="app.mjs"></script></html>
