@@ -53,3 +53,16 @@ Next gates, in order:
 2. WebGPU renderer, display-synchronized presentation, deterministic input/physics
    scheduling, input and audio. Repeat headless tests after integration changes.
 3. Offline cache, persistent user data, TAS editing and complete-world snapshots.
+
+Actual browser qualification (still no interactive renderer):
+  cmake --build /path/to/build/wasm/engine --target PlayerWeb --parallel 12
+  npm ci --prefix packaging/web
+  node packaging/web/qualify-browser.mjs /path/to/PlayerWeb.mjs /path/to/game \
+    /path/to/clean-user /path/to/corpus.json CASE_ID /path/to/new-results
+Set CHROME_PATH to the Chrome executable outside the default macOS location.
+The harness creates a fresh disposable browser profile and a loopback-only HTTP
+server. Assets load into a dedicated Worker's MEMFS; input/reference hashes and
+candidate bytes are preserved for comparison. Environment variables must be set
+in preRun, before C++ constructors cache libc's environment. The Worker currently
+runs the blocking qualification loop; it is not the interactive game host.
+review-browser.py applies exactly the same trace/score gates as the Node runner.
