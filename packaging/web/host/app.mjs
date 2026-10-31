@@ -44,12 +44,38 @@ async function persist(){
     try{await sync();storage('已保存到此浏览器。');listFiles()}
     catch(error){storage('保存失败：'+error.message);throw error}
 }
-function fit(){
-    if(!running)return;
-    const width=Math.max(320,Math.min(1280,Math.floor($('stage').clientWidth)));
-    const height=Math.max(240,Math.min(960,Math.floor(innerHeight-190)));
-    player._BallanceWebResize(width,height);$('canvas').focus();
+// Container dimensions are independent of the canvas, preventing resize loops.
+// ResizeObserver covers header wrapping/layout changes; window/media events also
+// catch browser zoom and movement between displays with a different pixel ratio.
+let resizeFrame=0,lastSize='';
+function resizeGame(){
+    resizeFrame=0;if(!running)return;
+    const stage=$('stage'),width=Math.floor(stage.clientWidth),height=Math.floor(stage.clientHeight);
+    if(width<=0||height<=0)return;
+    const key=width+':'+height+':'+devicePixelRatio;
+    const canvas=$('canvas');
+    if((key!==lastSize||canvas.clientWidth!==width||canvas.clientHeight!==height) &&
+        player._BallanceWebResize(width,height))lastSize=key;
 }
+function scheduleResize(){if(!resizeFrame)resizeFrame=requestAnimationFrame(resizeGame)}
+const layoutObserver=new ResizeObserver(()=>{
+    document.documentElement.style.setProperty('--header-height',document.querySelector('header').offsetHeight+'px');
+    scheduleResize();
+});
+layoutObserver.observe(document.querySelector('header'));layoutObserver.observe($('stage'));
+layoutObserver.observe($('canvas')); // Game scripts may reset their authored initial resolution.
+window.addEventListener('resize',scheduleResize);
+let densityQuery;
+function watchDensity(){
+    densityQuery?.removeEventListener('change',watchDensity);
+    densityQuery=matchMedia('(resolution: '+devicePixelRatio+'dppx)');
+    densityQuery.addEventListener('change',watchDensity);
+    // A density-only change need not fire window.resize. SDL refreshes its
+    // cached drawable scale from that event before our normal resize request.
+    if(running)window.dispatchEvent(new Event('resize'));
+    scheduleResize();
+}
+watchDensity();
 async function importFiles(input,directory,extension){
     try{
         for(const file of input.files){
@@ -72,7 +98,7 @@ $('start').onclick=async()=>{
             print:line=>console.log(line),printErr:line=>console.error(line),
             onAbort:reason=>status('游戏运行失败：'+reason),
             onBallanceExit:async()=>{
-                running=false;clearInterval(timer);$('quit').disabled=$('fit').disabled=true;
+                running=false;clearInterval(timer);$('quit').disabled=true;
                 await persist();status('游戏已退出，数据已保存。重新加载页面可以再次启动。');
             }});
         player.FS.mkdirTree('/user');player.FS.mount(player.IDBFS,{},'/user');
@@ -91,8 +117,8 @@ $('start').onclick=async()=>{
         }));
         const code=player.callMain(['--root-path','/game','--cmo','/game/base.cmo','--user-data-path','/user','--rasterizer','webgpu']);
         if(code)throw new Error('Player 初始化失败 '+code);
-        running=true;gpu.setSamples(Number($('samples').value));
-        for(const id of ['quit','fit','maps','tapes','save','refresh','capture','restore'])$(id).disabled=false;
+        running=true;resizeGame();gpu.setSamples(Number($('samples').value));
+        for(const id of ['quit','maps','tapes','save','refresh','capture','restore'])$(id).disabled=false;
         timer=setInterval(()=>{void persist().catch(()=>{})},10000);
         await persist();status('方向键移动，Enter 确认，Esc 暂停。');$('canvas').focus();
         // Keep introspection available for local acceptance tests and diagnostics.
@@ -100,7 +126,7 @@ $('start').onclick=async()=>{
     }catch(error){status('无法启动：'+error.message);console.error(error)}
 };
 $('quit').onclick=()=>{if(running){$('quit').disabled=true;player._BallanceWebRequestQuit()}};
-$('fit').onclick=fit;$('samples').onchange=()=>gpu?.setSamples(Number($('samples').value));
+$('samples').onchange=()=>gpu?.setSamples(Number($('samples').value));
 $('save').onclick=()=>{void persist().catch(()=>{})};$('refresh').onclick=listFiles;
 $('maps').onchange=()=>importFiles($('maps'),'/user/ModLoader/Maps','.nmo');
 $('tapes').onchange=()=>importFiles($('tapes'),'/user/ModLoader/TAS','.tas');

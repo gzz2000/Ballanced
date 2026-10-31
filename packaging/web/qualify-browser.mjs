@@ -95,7 +95,7 @@ const server = createServer(async (request, response) => {
       response.end(candidateBuffers.get(url.pathname));return;
     }
     if (url.pathname === '/manifest.json') {
-      response.setHeader('Content-Type','application/json');response.end(JSON.stringify({assets,config,snapshotSequence,webCheckpoints:process.env.BALLANCE_TEST_WEB_CHECKPOINTS==='1'}));return;
+      response.setHeader('Content-Type','application/json');response.end(JSON.stringify({assets,config,snapshotSequence,webCheckpoints:process.env.BALLANCE_TEST_WEB_CHECKPOINTS==='1',resizeStress:process.env.BALLANCE_TEST_RESIZE==='1'}));return;
     }
     const path=resources.get(url.pathname);
     if(!path){response.writeHead(404).end();return;}

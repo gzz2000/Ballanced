@@ -175,3 +175,20 @@ Parallel browser corpus runner (freezes JS/WASM/WGSL and uses fresh profiles):
     --output /path/to/new-results --jobs 4 --snapshots --web-checkpoints
 Omit --snapshots for controls only, or add --case CASE_ID for an isolated case.
 Compact results survive; successful large traces are removed unless --keep-traces.
+
+Responsive browser viewport
+---------------------------
+The canvas now follows the available browser layout automatically, including
+wrapped toolbars and pixel-density changes. Resize does not focus the canvas
+while typing in forms. Presentation uses the full viewport and derives horizontal
+FOV from each authored camera's vertical scale; cameras/physics are unchanged.
+The policy is enabled by PlayerBrowser only; native contexts retain their default.
+  node packaging/web/qualify-responsive.mjs /path/to/site /path/to/new-results
+This checks compositor pixels at both edges, submitted geometry projection,
+repeated/narrow layouts,1x/2x buffers, mouse navigation, focus and idle resize calls.
+The legacy sky effect has its own intentional FOV distortion. CDP density changes
+need an explicit simulated media notification because CDP emits no browser event.
+BALLANCE_TEST_RESIZE=1 with qualify-browser-corpus.py exercises repeated drawable
+resizes during reference playback and (with --snapshots) cursor/world restoration.
+Latest resize-specific gate: HS02_5885 control +3captures/6restores passed; this is
+one additional case, not a claim that the full corpus was rerun for this patch.

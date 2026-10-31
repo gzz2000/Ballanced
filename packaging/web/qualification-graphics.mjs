@@ -57,7 +57,14 @@ document.querySelector('#start').onclick = async () => {
     const code=player.callMain(['--root-path','/game','--cmo','/game/base.cmo','--user-data-path','/user','--rasterizer','webgpu']);
     if(code)throw new Error(`Player initialization failed: ${code}`);
     canvas.focus();
+    let resizedFrames=0;
     monitor=setInterval(()=>{
+      if(manifest.resizeStress && gpu.frames-resizedFrames>=20){
+        const sizes=[[1000,600],[800,600],[1400,700],[640,480]];
+        const size=sizes[(result.resizeCount??0)%sizes.length];
+        if(!player._BallanceWebResize(...size))throw new Error('Stress resize rejected');
+        result.resizeCount=(result.resizeCount??0)+1;resizedFrames=gpu.frames;
+      }
       const log=player.FS.readFile('/user/ModLoader/ModLoader.log',{encoding:'utf8'});
       if(log.includes('On Message LevelFinish')&&
          log.lastIndexOf('native fast')>log.lastIndexOf('precise x87 (TAS)')) {
