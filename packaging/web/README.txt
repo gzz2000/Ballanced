@@ -66,3 +66,34 @@ candidate bytes are preserved for comparison. Environment variables must be set
 in preRun, before C++ constructors cache libc's environment. The Worker currently
 runs the blocking qualification loop; it is not the interactive game host.
 review-browser.py applies exactly the same trace/score gates as the Node runner.
+
+Interactive WebGPU prototype (stage 3)
+-------------------------------------
+Pass --webgpu to build-headless.py to enable CKWebGpuRasterizer and PlayerBrowser.
+It reuses CKFFPLib and its existing fixed-function uniform/shader interface.
+Generate WGSL from the checked-in native SPIR-V pack with:
+  python3 Source/RenderEngine/src/CKRasterizer/CKWebGpuRasterizer/shaders/compile_web_shaders.py \
+    --tint /path/to/tint-with-SPIRV-reader \
+    --spirv-grammar /path/to/spirv.core.grammar.json --output /path/to/generated
+Validated Tint source: Dawn 97ae1b10ac9d579f7e6b790ce7fc4faa1041f820.
+Build with TINT_BUILD_SPV_READER=ON; the prebuilt release Tint may omit it.
+The generator verifies native shader hashes and records compiler/output hashes.
+WGSL has no ImageQueryLod: the pass lowers the used unclamped LOD component to
+texture-size/derivative math; unexpected query consumers are rejected.
+
+  node packaging/web/qualify-renderer.mjs /path/to/generated/shaders.json result.json
+  node packaging/web/qualify-browser.mjs /path/to/PlayerBrowser.mjs /path/to/game \
+    /path/to/clean-user /path/to/corpus.json CASE_ID /path/to/new-results \
+    /path/to/generated/shaders.json
+The second command applies the same original-Windows trace and score gate while
+presenting real WebGPU frames. The standard-A corpus passed all 31 cases / 964653
+eligible rows. Pixel tests cover full/partial clears, repeated resize and 1x/4x
+MSAA. Actual browser tests cover keyboard navigation, movement, pause, mouse hit
+testing after resize, DPR2 and nonzero audio samples. Presentation follows rAF;
+fixed simulation steps consume timestamped input independently of display rate.
+
+Known prototype limits: texture render targets and engine readback APIs are not
+implemented/advertised. FXAA, sharpening and render-scale options are not applied;
+4x MSAA and physical HiDPI rendering are supported. Volume mip generation is not
+implemented. These are not claims of full rasterizer API compatibility. Offline
+persistence and whole-world snapshot qualification are separate later gates.

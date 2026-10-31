@@ -10,8 +10,8 @@ import {createHash} from 'node:crypto';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 
-const [playerArg, gameArg, templateArg, manifestArg, caseId, outputArg] = process.argv.slice(2);
-if (!outputArg) throw new Error('Usage: qualify-browser.mjs PlayerWeb.mjs game template-user corpus.json case-id new-output');
+const [playerArg, gameArg, templateArg, manifestArg, caseId, outputArg, shaderBundle, rendererArg] = process.argv.slice(2);
+if (!outputArg) throw new Error('Usage: qualify-browser.mjs PlayerWeb.mjs game template-user corpus.json case-id new-output [shaders.json [webgpu.mjs]]');
 const player = resolve(playerArg), game = resolve(gameArg), output = resolve(outputArg);
 const cases = JSON.parse(await readFile(manifestArg)).cases;
 const selected = cases.find(c => c.id === caseId);
@@ -24,9 +24,17 @@ const candidateBuffers=new Map([
   ['/PlayerWeb.mjs',await readFile(player)],
   ['/PlayerWeb.wasm',await readFile(player.replace(/\.mjs$/,'.wasm'))],
 ]);
+if (shaderBundle) candidateBuffers.set('/PlayerBrowser.wasm',candidateBuffers.get('/PlayerWeb.wasm'));
 const resources = new Map([
   ['/worker.mjs', join(source, 'qualification-worker.mjs')],
+  ['/graphics.mjs', join(source, 'qualification-graphics.mjs')],
+  ['/webgpu.mjs', join(source, '../../Source/RenderEngine/src/CKRasterizer/CKWebGpuRasterizer/webgpu.mjs')],
 ]);
+if (shaderBundle) resources.set('/shaders.json',resolve(shaderBundle));
+if (shaderBundle) {
+  candidateBuffers.set('/webgpu.mjs',await readFile(rendererArg ? resolve(rendererArg) : resources.get('/webgpu.mjs')));
+  candidateBuffers.set('/shaders.json',await readFile(resolve(shaderBundle)));
+}
 const assets = [];
 async function addFile(path, vfs) {
   const url = '/asset/' + assets.length;
@@ -49,7 +57,9 @@ const destinations = new Map([
   ['stdout.log','stdout.log'], ['player.trace','player.trace'], ['retail.trace','retail.trace'],
   ['score.csv','score.csv'], ['ModLoader.log','user/ModLoader/ModLoader.log'], ['result.json','browser-result.json'],
 ]);
-const pageHTML = `<!doctype html><meta charset="utf-8"><title>Ballanced WASM qualification</title>
+const pageHTML = shaderBundle ? `<!doctype html><meta charset="utf-8"><title>Ballanced WebGPU qualification</title>
+<button id="start">Start qualification</button><canvas id="canvas" tabindex="0"></canvas>
+<script type="module" src="/graphics.mjs"></script>` : `<!doctype html><meta charset="utf-8"><title>Ballanced WASM qualification</title>
 <h1>Ballanced browser qualification</h1><pre id="status">Loading...</pre>
 <script type="module">
 const worker = new Worker('/worker.mjs', {type:'module'});
@@ -81,7 +91,7 @@ const server = createServer(async (request, response) => {
     if (url.pathname === '/') {response.setHeader('Content-Type','text/html');response.end(pageHTML);return;}
     if (url.pathname === '/favicon.ico') {response.writeHead(204).end();return;}
     if (candidateBuffers.has(url.pathname)) {
-      response.setHeader('Content-Type',url.pathname.endsWith('.mjs')?'text/javascript':'application/wasm');
+      response.setHeader('Content-Type',url.pathname.endsWith('.mjs')?'text/javascript':url.pathname.endsWith('.json')?'application/json':'application/wasm');
       response.end(candidateBuffers.get(url.pathname));return;
     }
     if (url.pathname === '/manifest.json') {
@@ -103,10 +113,12 @@ try {
   page.on('console',message=>console.log(message.type(),message.text()));
   page.on('pageerror',error=>console.error(error));
   await page.goto(`http://127.0.0.1:${server.address().port}/`);
+  if (shaderBundle) await page.click('#start');
   await page.waitForFunction(()=>window.qualificationResult,{},{timeout:0});
   const result=await page.evaluate(()=>window.qualificationResult);
   result.case=selected.id;result.tape=selected.tape_sha256;
   result.candidate={js:hash(candidateBuffers.get('/PlayerWeb.mjs')),wasm:hash(candidateBuffers.get('/PlayerWeb.wasm'))};
+  if(shaderBundle)Object.assign(result.candidate,{renderer:hash(candidateBuffers.get('/webgpu.mjs')),shaders:hash(candidateBuffers.get('/shaders.json'))});
   result.browser=browser.version();
   await writeFile(join(output,'browser-result.json'),JSON.stringify(result,null,2));
   console.log(JSON.stringify(result));
