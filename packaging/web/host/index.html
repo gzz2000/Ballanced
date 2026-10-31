@@ -4,11 +4,10 @@
 <header><strong>Ballance</strong><button id="quit" disabled>退出并保存</button>
 <button id="capture" disabled>保存状态 F5</button><button id="restore" disabled>恢复状态 F8</button>
 <label>抗锯齿 <select id="samples"><option value="4">4× MSAA</option><option value="1">关闭</option></select></label>
-<button id="toggle-sidebar" aria-controls="sidebar" aria-expanded="false">地图与 TAS</button></header>
+<button id="toggle-sidebar" aria-controls="sidebar" aria-expanded="false">地图与 TAS</button>
+<div id="status-bar"><span id="status" role="status">正在加载游戏…</span><span id="cache-status"><span id="offline" role="status">正在准备离线缓存…</span><progress id="cache-progress" aria-label="离线资源下载进度"></progress></span></div></header>
 <main><section id="game-pane"><div id="stage"><canvas id="canvas" tabindex="0" width="640" height="480" aria-label="Ballance 游戏画面"></canvas>
 <div id="restart-screen" hidden><button id="restart">重新开始</button></div></div>
-<p id="status" role="status">正在加载游戏…</p>
-<p id="offline" role="status">正在准备离线缓存…</p>
 </section><aside id="sidebar" aria-labelledby="sidebar-title" hidden>
 <div class="sidebar-heading"><h2 id="sidebar-title">地图与 TAS</h2><button id="close-sidebar" aria-label="收起侧栏">收起</button></div>
 <details open><summary>地图、TAS 与用户数据</summary>

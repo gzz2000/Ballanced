@@ -18,8 +18,14 @@ const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/A
 const result={passed:false},logs=[];
 try{
  const context=await browser.newContext(),page=await context.newPage();
+ await page.addInitScript(()=>{
+  window.cacheTransfers=[];
+  navigator.serviceWorker?.addEventListener('message',event=>{
+   if(event.data?.cacheProgress!==undefined)cacheTransfers.push(event.data);
+  });
+ });
  page.on('console',message=>{logs.push(message.text());if(message.type()==='error')console.error(message.text())});page.on('pageerror',error=>logs.push('PAGE ERROR '+error));
- await page.goto('http://127.0.0.1:'+server.address().port);
+ await page.goto(process.env.BALLANCE_TEST_URL||'http://127.0.0.1:'+server.address().port);
  // Playwright evaluate grants a CDP user gesture. Observe startup without that
  // synthetic activation so the autoplay-policy test is meaningful.
  const cdp=await context.newCDPSession(page);
@@ -35,6 +41,9 @@ try{
  await page.keyboard.press('Shift');
  await page.waitForFunction(()=>ballance.player.SDL3?.audioContext?.state==='running',{},{timeout:10000});
  result.audioAfterGesture='running';
+ result.cacheTransfer=await page.evaluate(()=>({first:cacheTransfers[0],last:cacheTransfers.at(-1),
+  monotonic:cacheTransfers.every((v,i)=>!i||v.cacheBytes>=cacheTransfers[i-1].cacheBytes)}));
+ if(!result.cacheTransfer.monotonic||result.cacheTransfer.last?.cacheBytes!==result.cacheTransfer.last?.totalBytes)throw new Error('Cache byte progress incomplete');
  await page.click('#toggle-sidebar');
  await page.locator('#maps').setInputFiles(mapPath);await page.waitForFunction(()=>document.querySelector('#status').textContent.includes('导入完成'),{},{timeout:0});
  await page.evaluate(()=>document.querySelector('#status').textContent='Testing next import');

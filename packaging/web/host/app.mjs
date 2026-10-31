@@ -170,19 +170,31 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden&&userReady)
 // checked successfully. A failed install never replaces the previous version.
 if('serviceWorker' in navigator){
     let cacheReady=false;
+    const progress=$('cache-progress');
     navigator.serviceWorker.addEventListener('message',event=>{
-        if(event.data?.cacheError)$('offline').textContent='离线缓存失败：'+event.data.cacheError;
-        else if(event.data?.cacheProgress&&!cacheReady)$('offline').textContent='正在缓存离线资源：'+event.data.cacheProgress+'/'+event.data.total;
+        const data=event.data;
+        if(data?.cacheError){progress.hidden=true;$('offline').textContent='离线缓存失败：'+data.cacheError}
+        else if(data?.cacheProgress!==undefined&&!cacheReady){
+            progress.hidden=false;
+            if(data.totalBytes!==null&&data.totalBytes>0){
+                progress.max=data.totalBytes;progress.value=data.cacheBytes;
+                $('offline').textContent='离线资源：'+(data.cacheBytes/1e6).toFixed(1)+' / '+(data.totalBytes/1e6).toFixed(1)+' MB';
+            }else{
+                progress.max=data.total;progress.value=data.cacheProgress;
+                $('offline').textContent='离线资源：'+data.cacheProgress+' / '+data.total+' 个文件';
+            }
+        }
     });
     navigator.serviceWorker.register('./sw.js').then(async registration=>{
         const ready=await navigator.serviceWorker.ready;
         cacheReady=true; // Queued install progress must not overwrite readiness.
-        $('offline').textContent='离线缓存已就绪。下次可在没有网络时打开此页面。';
+        progress.hidden=true;$('offline').textContent='离线缓存已就绪';
+        $('offline').title='下次可在没有网络时打开此页面。';
         if(registration.waiting)$('offline').textContent+=' 新版本将在关闭本网站所有页面后启用。';
         const persistent=await navigator.storage?.persist?.();
-        if(!persistent)$('offline').textContent+=' 浏览器仍可能在空间不足时清理网站数据，请备份存档。';
-    }).catch(error=>{$('offline').textContent='离线缓存失败：'+error.message});
-}else $('offline').textContent='当前环境不支持离线缓存，请通过 localhost 或 HTTPS 打开。';
+        if(!persistent)$('offline').title+=' 浏览器仍可能在空间不足时清理网站数据，请备份存档。';
+    }).catch(error=>{progress.hidden=true;$('offline').textContent='离线缓存失败：'+error.message});
+}else {$('cache-progress').hidden=true;$('offline').textContent='当前环境不支持离线缓存，请通过 localhost 或 HTTPS 打开。'}
 
 const keyNames=['↑','↓','←','→','Shift','Space','Q','Esc','Enter（保留位）'];
 for(const [i,name] of keyNames.entries()){

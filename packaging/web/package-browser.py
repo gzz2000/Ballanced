@@ -28,8 +28,9 @@ for name in ('Player.ini','Database.tdb'):asset(a.template_user/name,'/user/'+na
 for file in sorted((a.bml_source/'packaging/runtime/ModLoader/Fonts').glob('*')):
     if file.is_file():asset(file,'/user/ModLoader/Fonts/'+file.name,True)
 (out/'assets.json').write_text(json.dumps(dict(assets=assets),ensure_ascii=False,indent=2)+'\n')
-files=[dict(url=f.relative_to(out).as_posix(),sha256=digest(f.read_bytes())) for f in sorted(out.rglob('*')) if f.is_file()]
+files=[dict(url=f.relative_to(out).as_posix(),size=f.stat().st_size,sha256=digest(f.read_bytes())) for f in sorted(out.rglob('*')) if f.is_file()]
 sw=(here/'host/sw.template.js').read_text();version=digest((json.dumps(files,sort_keys=True)+sw).encode())[:24]
 (out/'sw.js').write_text(sw.replace('__VERSION__',json.dumps(version)).replace('__FILES__',json.dumps(files)))
 (out/'build.json').write_text(json.dumps(dict(version=version,files=files),indent=2)+'\n')
+copy(here/'serve.py','serve.py') # Local server helper; not a browser/offline asset.
 print(json.dumps(dict(output=str(out),version=version,files=len(files),bytes=sum(f.stat().st_size for f in out.rglob('*') if f.is_file()))))

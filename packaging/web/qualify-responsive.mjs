@@ -27,8 +27,9 @@ try{
  const key=async k=>{await page.keyboard.down(k);await advance(6);await page.keyboard.up(k);await advance(20)};
  const inspect=async()=>{
   await advance(15);
-  const size=await page.evaluate(()=>{const c=document.querySelector('canvas'),s=document.querySelector('#stage');return {css:[c.clientWidth,c.clientHeight],pixels:[c.width,c.height],stage:[s.clientWidth,s.clientHeight],dpr:devicePixelRatio,focus:document.activeElement.id,errors:ballance.gpu.errors}});
+  const size=await page.evaluate(()=>{const c=document.querySelector('canvas'),s=document.querySelector('#stage'),b=s.getBoundingClientRect(),h=document.querySelector('header').getBoundingClientRect();return {css:[c.clientWidth,c.clientHeight],pixels:[c.width,c.height],stage:[s.clientWidth,s.clientHeight],edges:[b.x,b.y-h.bottom,innerHeight-b.bottom],dpr:devicePixelRatio,focus:document.activeElement.id,errors:ballance.gpu.errors}});
   if(String(size.css)!==String(size.stage)||size.pixels.some((x,i)=>Math.abs(x-size.css[i]*size.dpr)>1)||size.errors.length)throw new Error('Responsive sizing failed '+JSON.stringify(size));
+  if(size.edges.some(v=>Math.abs(v)>1))throw new Error('Gap around game viewport '+JSON.stringify(size.edges));
   result.sizes.push(size);return size;
  };
  for(const [width,height] of [[1400,850],[900,850],[650,750],[320,700],[1400,850]]){await page.setViewportSize({width,height});await inspect()}

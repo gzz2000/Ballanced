@@ -104,15 +104,19 @@ Offline browser distribution (stage 4)
     --shaders /path/to/generated/shaders.json --game /path/to/game \
     --template-user /path/to/clean-user --bml-source /path/to/BallanceModLoaderPlus \
     --output /path/to/new-site
-  python3 -m http.server 18766 --bind 127.0.0.1 --directory /path/to/new-site
+  python3 packaging/web/serve.py --port 18766 --bind 127.0.0.1 --directory /path/to/new-site
 Open http://127.0.0.1:18766 in a WebGPU browser. A remote deployment needs HTTPS.
 Use a stable hostname/port: browser data belongs to that origin. file:// cannot
 provide WebGPU/offline service worker support. The output includes your game
 assets (~162 MB in our fixture); proprietary assets are not committed here.
-The example Python HTTP server does not enable transport compression. Production
-hosting can enable gzip/Brotli Content-Encoding (and Vary: Accept-Encoding); fetch
-and cache integrity checks operate on decoded bytes. A ZIP download does not
-enable HTTP compression. Do not confuse transfer bytes with browser cache quota.
+The included serve.py negotiates gzip (only when smaller), caches compressed file
+revisions outside the served tree, and supplies Content-Length, Vary and ETag.
+It keeps the same loopback URL for SSH forwarding. fetch/cache integrity checks
+operate on decoded bytes. A ZIP download alone does not enable HTTP compression.
+The offline worker first obtains encoded lengths with HEAD, then reports completed
+and verified GET response-body bytes, excluding HTTP headers/SSH framing. Progress
+updates per completed file; if wire lengths are unavailable it falls back to file
+counts. These transfer bytes are not browser storage quota measurements.
 
 The page starts the game automatically; audio resumes on the first real click or
 keypress if autoplay is blocked. After orderly exit and IDBFS synchronization, a
@@ -210,3 +214,8 @@ restarts retain imported maps, TAS and a sentinel; editor edit/undo/save preserv
 the decompressed recording. Responsive qualification also checks desktop sidebar
 space reservation, Esc closing, narrow-screen overlay, DPR changes and no idle
 resize loop. This host-only iteration did not rerun the full TAS corpus.
+
+The status and offline download progress live in the toolbar. The canvas fills
+all remaining viewport space without outer padding; the right tools sidebar
+retains its desktop split/narrow overlay behavior. serve.py defaults to loopback
+port18766; retain that origin when updating so IndexedDB data stays accessible.
