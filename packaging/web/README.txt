@@ -1,9 +1,10 @@
-WebAssembly qualification build
-==============================
-This directory currently builds a Node-hosted wasm32 Player with the real CK2,
-BuildingBlocks/IVP, BML Plus, BallanceTAS and legacy TAS environment linked in.
-It is NOT yet a browser distribution. NODERAWFS is for headless reference tests;
-the browser build must use a virtual filesystem and a yielding event loop.
+Ballanced WebAssembly / WebGPU
+=============================
+One shared engine builds three hosts: Node (Player.js), headless browser Worker
+(PlayerWeb.mjs), and interactive WebGPU (PlayerBrowser.mjs). CK2, BuildingBlocks /
+IVP, BML Plus, BallanceTAS, LegacyTASRuntime and PracticeTools are linked statically.
+Node uses NODERAWFS for isolated reference tests. The interactive host uses MEMFS,
+IDBFS user persistence and a yielding requestAnimationFrame loop.
 
 Validated toolchain: Emscripten 6.0.13, SDL 3.4.16, CMake/Ninja, Node 24.
 Use official emsdk install/activate 6.0.13. Keep -ffp-contract=off. The precise
@@ -47,14 +48,14 @@ JSON results. Successful large scratch files are retired unless --keep-traces.
 A passing reference corpus does not qualify other recording environments,
 full-world save/restore, browser graphics, browser scheduling or offline storage.
 
-Next gates, in order:
+Implementation and qualification order:
 1. All qualified TAS trajectories and score streams pass in WASM; fast/precise
    arithmetic, world lifetime and mode transition checks pass.
 2. WebGPU renderer, display-synchronized presentation, deterministic input/physics
    scheduling, input and audio. Repeat headless tests after integration changes.
 3. Offline cache, persistent user data, TAS editing and complete-world snapshots.
 
-Actual browser qualification (still no interactive renderer):
+Headless browser Worker qualification:
   cmake --build /path/to/build/wasm/engine --target PlayerWeb --parallel 12
   npm ci --prefix packaging/web
   node packaging/web/qualify-browser.mjs /path/to/PlayerWeb.mjs /path/to/game \
@@ -95,5 +96,82 @@ fixed simulation steps consume timestamped input independently of display rate.
 Known prototype limits: texture render targets and engine readback APIs are not
 implemented/advertised. FXAA, sharpening and render-scale options are not applied;
 4x MSAA and physical HiDPI rendering are supported. Volume mip generation is not
-implemented. These are not claims of full rasterizer API compatibility. Offline
-persistence and whole-world snapshot qualification are separate later gates.
+implemented. These are not claims of full rasterizer API compatibility.
+
+Offline browser distribution (stage 4)
+--------------------------------------
+  python3 packaging/web/package-browser.py --player /path/to/PlayerBrowser.mjs \
+    --shaders /path/to/generated/shaders.json --game /path/to/game \
+    --template-user /path/to/clean-user --bml-source /path/to/BallanceModLoaderPlus \
+    --output /path/to/new-site
+  python3 -m http.server 18766 --bind 127.0.0.1 --directory /path/to/new-site
+Open http://127.0.0.1:18766 in a WebGPU browser. A remote deployment needs HTTPS.
+Use a stable hostname/port: browser data belongs to that origin. file:// cannot
+provide WebGPU/offline service worker support. The output includes your game
+assets (~162 MB in our fixture); proprietary assets are not committed here.
+
+The page waits for a user gesture to initialize GPU/audio. Arrows move the ball;
+Enter/Esc navigate the game. Rendering follows display refresh independently of
+simulation ticks. Normal play uses WASM native floating point; record playback
+selects the software x87 solver and returns to fast mode when TAS ends.
+F5/F8 capture/restore one in-memory level snapshot; subsequent saves replace it.
+Snapshots include game/physics/animation/timer state and, during record playback,
+the playback cursor. They expire on level exit/reset/load or TAS shutdown. They
+are not disk saves, nor Lua VM continuation snapshots: unsupported TAS operations
+are rejected rather than restored partially. GPU resources remain outside saves.
+
+Import .nmo and .tas through the page. Files go to /user/ModLoader/Maps and TAS.
+BML's own menus remain available. Windows binary .bmodp mods cannot be loaded as
+WASM; native plugins must be ported and linked into the build. User settings,
+Database.tdb, maps and recordings live in IndexedDB, never in the cached assets.
+Automatic synchronization runs every ten seconds and on page backgrounding;
+use "立即保存数据" or "退出并保存" before closing, and download important files for
+backup. Browser eviction/clearing site data can remove both caches and saves.
+
+The service worker hashes every asset before activating a complete new version.
+It does not force-replace a running version. Close all tabs of the origin to
+activate a pending upgrade. Once the page reports its offline cache ready, the
+same URL works offline. Game assets and runtime are versioned together; user data
+is separate and survives runtime/cache updates.
+
+The initial TAS editor works in the menu: open a recording, inspect/edit an
+inclusive zero-based sample range, undo one change, save a named copy, select a
+level and play it. Editing preserves every original float delta unless explicitly
+changed; the parser/writer is the C++ TAS implementation. The Enter bit is retained
+for file compatibility; legacy playback does not inject it. This is a sample
+editor, not a full timeline UI or a Lua/script debugger.
+
+Acceptance tools:
+  BALLANCE_TEST_EDITOR=1 BALLANCE_TEST_PLAY=1 BALLANCE_TEST_FAST_CHECKPOINTS=1 \
+    node packaging/web/qualify-offline.mjs /path/to/site result.json map.nmo hs01.tas
+This exercises editor apply/undo/write, independent decompressed-record equality,
+UI-triggered strict playback with repeated snapshots to completion, offline
+reload, persisted imports and normal fast-mode hotkey snapshots. Use a qualified
+level-1 tape; the play option selects level 1.
+
+  python3 packaging/web/qualify-snapshots.py --player /path/to/Player.js \
+    --game /path/to/game --template-user /path/to/clean-user \
+    --manifest /path/to/corpus.json --output /path/to/new-results --jobs 8
+Optional --case CASE_ID --sequence s6500,r6900,r6900 exercises explicit cursors.
+--web-checkpoints goes through the public browser checkpoint command implementation,
+including its own cursor rewind; the checker does not perform a second rewind.
+With no explicit sequence, each case captures at three eligible trajectory points,
+restores twice at each and compares all revisited samples/scores against a separate
+uninterrupted control. The control must independently pass the original Windows
+gate. Collision-graph and semantic scene restore audits are also required.
+For real GPU snapshot cases append SEQUENCE CONTROL_RESULT_DIR to qualify-browser.mjs
+(after shaders.json and webgpu.mjs); BALLANCE_TEST_WEB_CHECKPOINTS=1 selects the
+same public command path. Each case requires separate output/user directories.
+
+Qualified locally in Chrome 156 / Apple Metal WebGPU: 31/31 standard-A recordings,
+964653 original eligible samples, and all 31 repeated snapshot sequences in both
+Node WASM and real WebGPU. This covers the qualified corpus, not every possible
+map/mod/scene state. Other browser engines and non-Apple GPUs remain unqualified.
+
+Parallel browser corpus runner (freezes JS/WASM/WGSL and uses fresh profiles):
+  python3 packaging/web/qualify-browser-corpus.py --player /path/to/PlayerBrowser.mjs \
+    --game /path/to/game --template-user /path/to/clean-user \
+    --manifest /path/to/corpus.json --shaders /path/to/shaders.json \
+    --output /path/to/new-results --jobs 4 --snapshots --web-checkpoints
+Omit --snapshots for controls only, or add --case CASE_ID for an isolated case.
+Compact results survive; successful large traces are removed unless --keep-traces.

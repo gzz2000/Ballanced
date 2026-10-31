@@ -1,0 +1,50 @@
+2026-10-31 browser port qualification
+
+Order: WASM build -> headless dual solver and TAS -> real WebGPU/I/O -> offline/data/editor/snapshots.
+Toolchain: Emscripten6.0.13, SDL3.4.16, Dawn/Tint97ae1b10ac9d579f7e6b790ce7fc4faa1041f820.
+Browser: Chrome156.0.8078.74 on Apple M5 Pro, Metal WebGPU (not a software adapter).
+Source versions are pinned by this superproject's submodules and packaging/web/dependencies.json.
+Delivered site version: 87f84200b9a3895baa3310d8; local distribution ~162MB before compression.
+
+E3849-E3856: Arithmetic/ABI/static modules and fast/strict collision checkpoints passed.
+Node WASM and real browser Worker: all31 standard-A original-Windows-qualified tapes passed,
+964653 eligible player samples bitwise equal (dt, timer, keys, transform, physics clocks/core), scores exact.
+Four tapes that fail original Windows standard A remain outside this corpus.
+Browser ENV must be set in preRun, before libc constructors cache environment values.
+
+E3865/E3875: all31 original trajectory/score controls passed while drawing actual WebGPU frames.
+26WGSL shaders compile; 14fixed-function fragment pipelines validated.
+Fixed explicit full-target clear handling and absolute VB index interpretation.
+Fixed framebuffer allocation vs SDL canvas resizing and viewport camera-ratio update ordering.
+Browser input uses canvas-relative mouse coordinates and per-tick event timestamps.
+Pixel tests: full/partial color/depth/stencil clears; 1x/4x MSAA; repeated resize, DPR2.
+Real keyboard/mouse navigation, level movement/pause and nonzero44100Hz audio output passed.
+
+E3881/E3883: all31 Node and all31 WebGPU snapshot cases pass independently verified controls,
+three overwrite captures and six restores per recording; exact revisited cursor/score rows;
+collision graph comparisons and semantic scene/animation/sound restore commits required.
+A false failure in the old checker compared struct tail padding. Now every state field is still
+bitwise checked; padding alone is reported and excluded. No physics tolerance was introduced.
+
+E3885: explicit pause-boundary cases HS02_5885, HS08_5721 and SR08_1.59 passed through
+public browser checkpoint commands with exact rewind trajectories and scores (9captures/18restores).
+E3888: final real WebGPU corpus through that public command implementation:31/31 controls
+and31/31 snapshot branches,93captures/186restores,37200 additional repeated visits,0GPUerrors;
+all finish, no BallOff/Dead, normal shutdown. The checker does not supply an extra cursor rewind.
+
+E3887: actual page import -> edit10..12 -> undo -> save copy; Node zlib verified original and
+saved decompressed .tas bytes identical. Page-button strict playback with repeated checkpoints
+finishes HS01 without death (5550presented frames,0GPUerrors). Quit, disable browser network,
+reload/start; map/tape/copy/sentinel persist. Normal fast-mode level1 entered by real keys;
+F5,F8,F8,F5,F8,F8 with held Up all succeed, no strict-mode activation or GPUerrors.
+Screenshot manually inspected. Packaged runtime hashes equal E3888 frozen candidate.
+E3886: final full CTest23/23, including component registry and paired JS/WASM stage install.
+Fixed missing WASM install companion and old native-only stage assumptions; build helper runs all tests.
+
+Limits: this corpus is not every map/mod/world state; fast mode is not asserted bitwise equal
+to retail x87. Lua VM continuation snapshots are rejected. Editor is a basic sample-range editor.
+WebGPU render targets/readback, FXAA/sharpening/render-scale and volume auto-mips are not implemented.
+Other browser engines and non-Apple GPUs remain unqualified. Browser persistence can be evicted;
+explicit export and orderly save are available. Runtime/game caches are separate from user IndexedDB.
+Successful large scratch is deleted; compact local experiment notes and result JSON are retained.
+Proprietary assets and recordings are not committed to this repository.

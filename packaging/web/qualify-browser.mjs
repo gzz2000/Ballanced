@@ -10,7 +10,7 @@ import {createHash} from 'node:crypto';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 
-const [playerArg, gameArg, templateArg, manifestArg, caseId, outputArg, shaderBundle, rendererArg] = process.argv.slice(2);
+const [playerArg, gameArg, templateArg, manifestArg, caseId, outputArg, shaderBundle, rendererArg, snapshotSequence, snapshotControl] = process.argv.slice(2);
 if (!outputArg) throw new Error('Usage: qualify-browser.mjs PlayerWeb.mjs game template-user corpus.json case-id new-output [shaders.json [webgpu.mjs]]');
 const player = resolve(playerArg), game = resolve(gameArg), output = resolve(outputArg);
 const cases = JSON.parse(await readFile(manifestArg)).cases;
@@ -95,7 +95,7 @@ const server = createServer(async (request, response) => {
       response.end(candidateBuffers.get(url.pathname));return;
     }
     if (url.pathname === '/manifest.json') {
-      response.setHeader('Content-Type','application/json');response.end(JSON.stringify({assets,config}));return;
+      response.setHeader('Content-Type','application/json');response.end(JSON.stringify({assets,config,snapshotSequence,webCheckpoints:process.env.BALLANCE_TEST_WEB_CHECKPOINTS==='1'}));return;
     }
     const path=resources.get(url.pathname);
     if(!path){response.writeHead(404).end();return;}
@@ -124,5 +124,7 @@ try {
   console.log(JSON.stringify(result));
   if(result.error || result.exit!==0) process.exitCode=1;
 } finally {await browser.close();await new Promise(resolve=>server.close(resolve));}
-const review=await promisify(execFile)('python3',[join(source,'review-browser.py'),resolve(manifestArg),caseId,output]);
+const reviewArgs=snapshotSequence ? [join(source,'review-snapshots.py'),resolve(snapshotControl),output,snapshotSequence]
+  : [join(source,'review-browser.py'),resolve(manifestArg),caseId,output];
+const review=await promisify(execFile)('python3',reviewArgs);
 console.log(review.stdout.trim());

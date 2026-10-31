@@ -34,6 +34,9 @@ document.querySelector('#start').onclick = async () => {
     const environment={BALLANCE_FAST_FORWARD_BATCH:'64',BALLANCE_AUTOMATE_QUIT_AFTER_MS:'120000',
       BALLANCE_TAS_TRACE_PLAYER_CORE:'1',BALLANCE_TAS_STATE_TRACE:'/player.trace',
       BALLANCE_TAS_RETAIL_STATE_TRACE:'/retail.trace',BALLANCE_GAMEPLAY_SCORE_TRACE:'/score.csv',SDL_AUDIODRIVER:'dummy'};
+    if(manifest.snapshotSequence)Object.assign(environment,{BALLANCE_TAS_SNAPSHOT_SEQUENCE:manifest.snapshotSequence,
+      BALLANCE_SNAPSHOT_AUDIT:'1',BALLANCE_COMPARE_COLLISION_GRAPH:'1'});
+    if(manifest.webCheckpoints)environment.BALLANCE_TEST_WEB_CHECKPOINTS='1';
     player=await createPlayer({canvas,ballanceGpu:gpu,
       preRun:[module=>Object.assign(module.ENV,environment)],
       print:line=>stdout.push(line),printErr:line=>stdout.push(line),

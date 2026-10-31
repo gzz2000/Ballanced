@@ -109,6 +109,10 @@ if (BALLANCE_TAS_SOURCE_DIR)
     set(ENGINE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}" CACHE PATH "" FORCE)
     add_subdirectory("${BALLANCE_BML_SOURCE_DIR}/mods/LegacyTASRuntime"
         "${CMAKE_BINARY_DIR}/LegacyTASRuntime")
+    set(PRACTICE_BUILD_STATIC ON CACHE BOOL "" FORCE)
+    add_subdirectory("${BALLANCE_BML_SOURCE_DIR}/mods/PracticeTools"
+        "${CMAKE_BINARY_DIR}/PracticeTools")
+    target_compile_definitions(BallanceTAS PRIVATE TAS_STATIC_PRACTICE=1)
 endif ()
 
 # Player -> Bin/

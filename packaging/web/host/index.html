@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ballance</title><link rel="stylesheet" href="style.css">
+<header><strong>Ballance</strong><button id="start">开始游戏</button><button id="quit" disabled>退出并保存</button>
+<button id="capture" disabled>保存状态 F5</button><button id="restore" disabled>恢复状态 F8</button>
+<button id="fit" disabled>适应窗口</button><label>抗锯齿 <select id="samples"><option value="4">4× MSAA</option><option value="1">关闭</option></select></label></header>
+<main><div id="stage"><canvas id="canvas" tabindex="0" width="640" height="480" aria-label="Ballance 游戏画面"></canvas></div>
+<p id="status" role="status">准备就绪。方向键、Enter 和 Esc 操作游戏。</p>
+<p id="offline" role="status">正在准备离线缓存…</p>
+<details><summary>地图、TAS 与用户数据</summary>
+<p>数据保存在当前浏览器。清除网站数据会删除存档；可以下载文件备份。</p>
+<label class="button">导入地图 <input id="maps" type="file" accept=".nmo" multiple disabled></label>
+<label class="button">导入 TAS <input id="tapes" type="file" accept=".tas" multiple disabled></label>
+<button id="save" disabled>立即保存数据</button><button id="refresh" disabled>刷新文件列表</button>
+<p id="storage" role="status"></p><ul id="files"></ul></details>
+<details id="editor"><summary>TAS 采样编辑器</summary>
+<p>在菜单中编辑副本，再选择关卡使用严格 x87 解算器回放。编号从 0 开始；每项是一次按键采样。</p>
+<select id="records" aria-label="TAS 录像"></select><button id="load-record" disabled>打开录像</button><span id="record-info"></span>
+<p><label>起始采样 <input id="first" type="number" min="0" value="0"></label> <label>结束采样（含） <input id="last" type="number" min="0" value="0"></label>
+<button id="inspect" disabled>读取该采样</button></p><div id="keys"></div>
+<p><label>每采样毫秒数 <input id="delta" type="number" min="0" max="1000" step="any" value="0"></label> 0 表示保留原始时间。
+<button id="apply" disabled>修改所选范围</button><button id="undo" disabled>撤销上次修改</button></p>
+<label>副本名称 <input id="copy-name" value="edited.tas"></label><button id="save-record" disabled>保存副本</button>
+<p><label>回放关卡 <select id="level"></select></label><button id="play-record" disabled>回放已保存录像</button></p>
+<p id="editor-status" role="status"></p><pre id="preview"></pre>
+</details>
+</main><script type="module" src="app.mjs"></script></html>

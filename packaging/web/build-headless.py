@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the Node-hosted WASM qualification runner (no browser I/O yet)."""
+"""Build and test shared WASM hosts, optionally including interactive WebGPU."""
 import argparse
 import pathlib
 import subprocess
@@ -39,6 +39,4 @@ run(emcmake, "cmake", "-S", source, "-B", build / "engine", "-G", "Ninja",
 run("cmake", "--build", build / "engine", "--parallel", args.jobs)
 if args.webgpu:
     run("cmake", "--build", build / "engine", "--target", "PlayerBrowser", "--parallel", args.jobs)
-run("ctest", "--test-dir", build / "engine", "-R",
-    "^ivp_|^PlayerSdlShortcutsTest$|^NativeHookAbiTest$|^NativeRenderSkipTest$|^StaticModRegistryTest$|^CKStaticPluginTest$",
-    "--output-on-failure", "--parallel", args.jobs)
+run("ctest", "--test-dir", build / "engine", "--output-on-failure", "--parallel", args.jobs)
