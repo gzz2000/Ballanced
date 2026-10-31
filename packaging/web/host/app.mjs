@@ -272,7 +272,7 @@ if('serviceWorker' in navigator){
             progress.hidden=false;
             if(data.totalBytes!==null&&data.totalBytes>0){
                 progress.max=data.totalBytes;progress.value=data.cacheBytes;
-                $('loading-status').textContent='离线资源：'+(data.cacheBytes/1e6).toFixed(1)+' / '+(data.totalBytes/1e6).toFixed(1)+' MB';
+                $('loading-status').textContent=(data.cacheByteKind==='compressed-packs'?'已下载压缩资源：':'离线资源：')+(data.cacheBytes/1e6).toFixed(1)+' / '+(data.totalBytes/1e6).toFixed(1)+' MB'+(data.cacheBytes===data.totalBytes?' · 正在完成校验…':'');
             }else{
                 progress.max=data.total;progress.value=data.cacheProgress;
                 $('loading-status').textContent='离线资源：'+data.cacheProgress+' / '+data.total+' 个文件';

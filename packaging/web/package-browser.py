@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Assemble a local, versioned browser distribution from your game assets."""
-import argparse,hashlib,json,pathlib,shutil
+import argparse,gzip,hashlib,json,pathlib,shutil
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--player',type=pathlib.Path,required=True)
 p.add_argument('--shaders',type=pathlib.Path,required=True)
@@ -36,7 +36,24 @@ html=out/'index.html';html.write_text(html.read_text().replace('__BUILD_VERSION_
 for file in files:
     if file['url']=='index.html':
         file.update(size=html.stat().st_size,sha256=digest(html.read_bytes()))
-(out/'sw.js').write_text(sw.replace('__VERSION__',json.dumps(version)).replace('__FILES__',json.dumps(files)))
-(out/'build.json').write_text(json.dumps(dict(version=version,files=files),indent=2)+'\n')
+# Explicit gzip payloads avoid hundreds of HEAD probes and give a fixed byte
+# denominator even when a CDN uses chunked HTTP compression without lengths.
+# Originals stay available for hosts/tests without Service Worker control.
+packs=[];group=[];group_size=0
+packed=[f for f in files if f['url'].startswith('assets/') or f['url'] in ('PlayerBrowser.wasm','shaders.json')]
+def flush_pack():
+    if not group:return
+    raw=b''.join((out/f['url']).read_bytes() for f in group)
+    compressed=gzip.compress(raw,compresslevel=6,mtime=0)
+    name='offline/'+digest(compressed)[:24]+'.pack'
+    path=out/name;path.parent.mkdir(exist_ok=True);path.write_bytes(compressed)
+    packs.append(dict(url=name,size=len(compressed),sha256=digest(compressed),files=[f['url'] for f in group]))
+for file in packed:
+    if group and group_size+file['size']>16*1024*1024:
+        flush_pack();group=[];group_size=0
+    group.append(file);group_size+=file['size']
+flush_pack()
+(out/'sw.js').write_text(sw.replace('__VERSION__',json.dumps(version)).replace('__FILES__',json.dumps(files)).replace('__PACKS__',json.dumps(packs)))
+(out/'build.json').write_text(json.dumps(dict(version=version,files=files,packs=packs),indent=2)+'\n')
 copy(here/'serve.py','serve.py') # Local server helper; not a browser/offline asset.
 print(json.dumps(dict(output=str(out),version=version,files=len(files),bytes=sum(f.stat().st_size for f in out.rglob('*') if f.is_file()))))

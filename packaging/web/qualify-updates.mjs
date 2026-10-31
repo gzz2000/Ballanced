@@ -15,8 +15,8 @@ const variant=async(label,bad=false)=>{
  const app=(await readFile(candidate+'/app.mjs','utf8'))+'\n// Upgrade fixture '+label+'\n';
  overrides.set('index.html',Buffer.from(html));overrides.set('app.mjs',Buffer.from(app));
  const files=metadata.files.map(file=>overrides.has(file.url)?{...file,size:overrides.get(file.url).length,sha256:hash(overrides.get(file.url))}:file);
- overrides.set('sw.js',Buffer.from(template.replace('__VERSION__',JSON.stringify(version)).replace('__FILES__',JSON.stringify(files))));
- if(bad)overrides.set('shaders.json',Buffer.from('corrupt shader download'));
+ overrides.set('sw.js',Buffer.from(template.replace('__VERSION__',JSON.stringify(version)).replace('__FILES__',JSON.stringify(files)).replace('__PACKS__',JSON.stringify(metadata.packs??[]))));
+ if(bad)overrides.set(metadata.packs?.[0]?.url??'style.css',Buffer.from('corrupt resource download'));
  return {root:candidate,version,overrides};
 };
 const a={root:legacy,version:JSON.parse(await readFile(legacy+'/build.json','utf8')).version,overrides:new Map()},b={root:candidate,version:metadata.version,overrides:new Map()},c=await variant('C'),d=await variant('D',true);

@@ -347,3 +347,23 @@ finishes without falls. Thirteen custom-map pairs were exercised in WebGPU;
 210522's late fall reproduces both in real time and with render batching.
 Exact published environment-A qualification and trajectory repair are PAUSED at
 the user's request. This release adds sharing, not a custom-TAS fidelity fix.
+
+Offline transfer packs (2026-11-01.5)
+-----------------------------------
+The offline installer no longer probes every resource with HEAD. The packager
+creates content-addressed offline/*.pack files containing explicit gzip streams;
+uncompressed groups are bounded to16MiB except a single larger source file.
+Packed resources include game assets, Wasm and shaders. Eight small shell files
+are fetched directly. This build uses11 packs totaling68,869,357 compressed bytes.
+The central progress meter reports compressed resource payload bytes as chunks
+arrive, independently of HTTP Content-Length or CDN gzip/brotli negotiation.
+Small shell requests and HTTP headers are not part of this resource-pack total.
+Each pack and each unpacked file is SHA256 checked before activation. CacheStorage
+retains individual runtime responses, so the engine reads no pack format and old
+running tabs keep their pinned version. Failed parallel installs settle all writes
+before deleting their partial cache. Loose files remain in the distribution for
+non-Service-Worker diagnostic/fallback hosts; this increases deployment ZIP size
+but normal offline installation fetches only the packs, not those loose copies.
+qualify-cache-progress.mjs SITE RESULT simulates delayed chunked pack responses,
+asserts zero HEAD/loose-asset network requests and progress before the first pack
+finishes, then reopens offline. qualify-updates also corrupts a pack to verify rollback.
