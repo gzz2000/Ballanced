@@ -11,3 +11,5 @@ body.sidebar-open.editor-open main{grid-template-columns:minmax(0,1fr) 600px}.gr
 #range-tools{margin:14px 0;font-size:12px}#range-tools summary{cursor:pointer;color:#b5c5d9;padding:4px 0}
 
 html,body{overflow:clip}html{height:100%}
+
+#share-dialog{max-width:min(520px,90vw);border:1px solid #52627a;border-radius:12px;background:#222b38;color:#e7edf5;padding:22px}#share-dialog::backdrop{background:#0009}#share-message{font-size:15px;color:inherit;overflow-wrap:anywhere;margin:0 0 20px}#share-dialog .actions{justify-content:flex-end;margin:0}

@@ -17,4 +17,4 @@
 <label class="field">每采样毫秒数<input id="delta" type="number" min="0" max="1000" step="any" value="0"></label><p class="hint">0 表示保留原始时间。</p><div class="actions"><button id="apply" disabled>修改范围</button></div></details>
 <label class="field">副本名称<input id="copy-name" value="edited.tas"></label><button id="save-record" disabled>保存副本</button>
 <label class="field">回放关卡<select id="level"></select></label><button id="play-record" disabled>回放已保存录像</button><p id="editor-status" role="status"></p></section>
-</aside></main><script type="module" src="app.mjs"></script></html>
+</aside></main><dialog id="share-dialog" aria-labelledby="share-message"><form method="dialog"><p id="share-message"></p><div class="actions"><button value="cancel" autofocus>取消</button><button value="yes">是</button></div></form></dialog><script type="module" src="app.mjs"></script></html>

@@ -314,3 +314,36 @@ multiple simultaneous snapshots. No automatic checkpoint index was implemented.
 Current ownership/exclusion tracks one snapshot plus scratch bank; a future bank
 must exclude every retained snapshot's CK storage, bound memory, invalidate all
 checkpoints at/after the earliest edited sample, and prove rewind/replay parity.
+
+Sharing maps and TAS recordings
+------------------------------
+Links use a client-side fragment; construct parameters with URLSearchParams so
+remote URLs containing '&' or other delimiters remain intact:
+  #!action=map&map=<encoded HTTP(S) .nmo URL>
+  #!action=tas&level=1&record=<encoded HTTP(S) .tas URL>
+  #!action=tas&map=<encoded .nmo URL>&record=<encoded .tas URL>
+The page asks for confirmation before fetching any shared asset. GitHub /raw/
+links are rewritten to raw.githubusercontent.com; other hosts must allow CORS.
+Downloaded files go to /user/ModLoader/Maps and /user/ModLoader/TAS in IDBFS.
+Identical bytes reuse the original or a numbered variant; differing files get
+2, 3, ... before the extension. Existing files are never overwritten. A link
+opened during gameplay persists data and starts a fresh engine session, retaining
+that link's confirmation for up to ten minutes. Cancellation aborts downloads.
+Limits: 128MiB per download; 64MiB declared uncompressed legacy TAS data.
+
+qualify-share-links.mjs URL OUTPUT TAS_RESOURCE_ROOT exercises all three link
+forms with real public files, consent, deduplication and persisted reload.
+qualify-share-errors.mjs URL OUTPUT covers HTTP/CORS/content failures and aborts.
+qualify-share-playback.mjs URL OUTPUT [builtin|custom] checks complete playback.
+qualify-custom-corpus.mjs URL MANIFEST OUTPUT WORKSPACE tests independent map/tape
+pairs with three isolated browser contexts. Its manifest is an array of objects
+with name, scope, tape and maps fields, paths relative to WORKSPACE. A finished
+recording is distinct from LevelFinish, especially for partial-sector demos.
+
+2026-11-01 sharing build: HS01_4740_1.30.344_264_口语大赛_onlyforyou
+finishes without falls. Thirteen custom-map pairs were exercised in WebGPU;
+山路十八弯, 泅溺幽海, 秋名道木球版 and 秋名道石球版 finish without falls.
+210522 and 镜界空轨 still fail; partial-sector recordings are not certified.
+210522's late fall reproduces both in real time and with render batching.
+Exact published environment-A qualification and trajectory repair are PAUSED at
+the user's request. This release adds sharing, not a custom-TAS fidelity fix.

@@ -12,7 +12,7 @@ a=p.parse_args();here=pathlib.Path(__file__).resolve().parent;out=a.output.resol
 def digest(data):return hashlib.sha256(data).hexdigest()
 def copy(source,name):
     path=out/name;path.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,path);return path
-for name in ('index.html','app.mjs','style.css','tas-grid.mjs'):copy(here/'host'/name,name)
+for name in ('index.html','app.mjs','style.css','tas-grid.mjs','share-links.mjs'):copy(here/'host'/name,name)
 copy(a.player,'PlayerBrowser.mjs');copy(a.player.with_suffix('.wasm'),'PlayerBrowser.wasm')
 copy(a.shaders,'shaders.json')
 copy(here/'../../Source/RenderEngine/src/CKRasterizer/CKWebGpuRasterizer/webgpu.mjs','webgpu.mjs')

@@ -1,3 +1,4 @@
+import {startShareLinks} from './share-links.mjs';
 import {createTASGrid} from './tas-grid.mjs';
 import {createBallanceGpu} from './webgpu.mjs';
 const $=id=>document.getElementById(id);
@@ -383,4 +384,5 @@ editorAction('play-record',()=>{
     $('editor-status').textContent='已启动严格模式回放。点击标题栏回放状态可停止；播完自动退出回放。';$('canvas').focus();updateRuntimeStatus();
 });
 
-void startGame();
+const gameReady=startGame();
+startShareLinks({ready:gameReady,getPlayer:()=>running?player:null,persist,status,focus:()=>{setSidebar(false);$('canvas').focus();updateRuntimeStatus()}});
