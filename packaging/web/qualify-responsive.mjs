@@ -23,7 +23,7 @@ try{
  });
  page.on('pageerror',e=>console.error(e));
 
- await page.goto('http://127.0.0.1:'+server.address().port);
+ await page.goto('http://127.0.0.1:'+server.address().port+(process.env.BALLANCE_TEST_WEBGL==='1'?'/?renderer=auto':''));
  await page.waitForFunction(()=>window.ballance?.gpu.frames>30,{},{timeout:0});
  const advance=async n=>{const t=await page.evaluate(n=>ballance.gpu.frames+n,n);await page.waitForFunction(t=>ballance.gpu.frames>=t,t,{timeout:0})};
  const key=async k=>{await page.keyboard.down(k);await advance(6);await page.keyboard.up(k);await advance(20)};

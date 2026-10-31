@@ -31,6 +31,33 @@ for(const type of ['keydown','keypress'])document.addEventListener(type,event=>{
 let player,gpu,running=false,userReady=false,syncTail=Promise.resolve(),timer,restartNeedsSave=false;
 const status=text=>{$('status').textContent=text};
 const storage=text=>{$('storage').textContent=text};
+const rendererKey='ballance.renderer',rendererChoices=['webgl2','webgpu','auto'];
+function rendererPreference(){
+    const override=new URLSearchParams(location.search).get('renderer');
+    if(rendererChoices.includes(override))return override;
+    try{const saved=localStorage.getItem(rendererKey);if(rendererChoices.includes(saved))return saved}catch{}
+    return 'webgl2';
+}
+const selectedRenderer=rendererPreference();
+$('renderer').value=selectedRenderer;
+$('renderer').onchange=()=>{$('apply-renderer').disabled=$('renderer').value===selectedRenderer};
+$('apply-renderer').onclick=async()=>{
+    const backend=$('renderer').value;
+    if(!rendererChoices.includes(backend))return;
+    $('apply-renderer').disabled=true;$('renderer').disabled=true;
+    try{
+        if(userReady)await persist();
+        localStorage.setItem(rendererKey,backend);
+        // A fresh document releases SDL/WASM and the old canvas context. Remove
+        // diagnostic overrides so the explicitly selected preference wins.
+        const url=new URL(location.href);url.searchParams.delete('renderer');
+        location.replace(url.href);
+    }catch(error){
+        status('未切换渲染器：'+error.message);
+        $('renderer').disabled=false;$('apply-renderer').disabled=false;
+    }
+};
+
 const sync=()=>{
     const operation=async()=>{
         player._BallanceWebFlushFiles();
@@ -165,7 +192,7 @@ async function startGame(){
         await cachePreparation;
         status('正在启动游戏…');$('loading-status').textContent='正在启动游戏…';
         const manifest=await(await fetch('./assets.json')).json();
-        gpu=await createBallanceRenderer($('canvas'),{backend:new URLSearchParams(location.search).get('renderer')||'auto'});
+        gpu=await createBallanceRenderer($('canvas'),{backend:selectedRenderer});
         $('solver-status').title='渲染器：'+(gpu.backend==='webgl2'?'WebGL2':'WebGPU');
         $('renderer-status').textContent='当前渲染器：'+(gpu.backend==='webgl2'?'WebGL2':'WebGPU');
         const {default:createPlayer}=await import('./PlayerBrowser.mjs');

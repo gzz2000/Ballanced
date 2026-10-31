@@ -27,7 +27,9 @@ try{
   });
  });
  page.on('console',message=>{logs.push(message.text());if(message.type()==='error')console.error(message.text())});page.on('pageerror',error=>logs.push('PAGE ERROR '+error));
- await page.goto(process.env.BALLANCE_TEST_URL||'http://127.0.0.1:'+server.address().port);
+ const destination=new URL(process.env.BALLANCE_TEST_URL||'http://127.0.0.1:'+server.address().port);
+ if(process.env.BALLANCE_TEST_WEBGL==='1')destination.searchParams.set('renderer','auto');
+ await page.goto(destination.href);
  // Playwright evaluate grants a CDP user gesture. Observe startup without that
  // synthetic activation so the autoplay-policy test is meaningful.
  const cdp=await context.newCDPSession(page);

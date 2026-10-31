@@ -371,8 +371,12 @@ finishes, then reopens offline. qualify-updates also corrupts a pack to verify r
 
 WebGL2 compatibility renderer (2026-11-01)
 ------------------------------------------
-The host prefers WebGPU, automatically choosing WebGL2 if navigator.gpu is
-absent, requestAdapter returns null/rejects, or requestDevice fails. Context
+The host defaults to WebGL2. Settings / Display offers WebGL2, WebGPU and
+Auto (prefer WebGPU). The choice is saved in localStorage after user data has
+been flushed to IDBFS, then the document restarts to change canvas context type.
+A failed save aborts switching; the current level is not preserved on restart.
+Auto chooses WebGL2 if navigator.gpu is absent, requestAdapter returns
+null/rejects, or requestDevice fails. Context
 selection happens only after device acquisition (canvas context types cannot
 be changed). ?renderer=webgl2 forces the fallback; ?renderer=webgpu disables
 fallback for diagnostics. Settings / Display shows the selected backend.
@@ -402,7 +406,7 @@ Acceptance helpers (npm ci first; Chrome executable as in other local tests):
   BALLANCE_TEST_WEBGL=1 BALLANCE_TEST_EDITOR=1 BALLANCE_TEST_FAST_CHECKPOINTS=1 \
     node packaging/web/qualify-offline.mjs /path/to/site result.json /path/to/map.nmo /path/to/record.tas
 The last two simulate a blocked WebGPU adapter, exercising automatic fallback
-instead of an explicit renderer override. Pixel comparison replays the exact
+instead of an explicit renderer override (use ?renderer=auto for this check). Pixel comparison replays the exact
 same captured game frame in both backends; small GPU filtering/rasterization
 rounding differences are allowed. Windows VM/Android hardware remain untested
 locally; the local forced fallback does not certify their drivers.
@@ -415,3 +419,9 @@ and returned to fast mode. Auto-fallback offline start/audio, map/TAS persistenc
 editor roundtrip, six fast checkpoints and two offline restarts passed. Responsive
 20-size/DPR/mouse/pause/sidebar checks and old-cache upgrade/rollback passed.
 These checks do not rerun or extend the historical full trajectory corpus.
+
+Renderer preference check:
+  node packaging/web/qualify-renderer-choice.mjs http://127.0.0.1:18766/ result.json
+Chrome156 passes fresh WebGL2 with no adapter probe, failed-save protection,
+WebGPU switch + reload with persisted user data, replacing a diagnostic URL
+with the sidebar choice, and WebGL2 offline reopen. No engine/WASM changes.

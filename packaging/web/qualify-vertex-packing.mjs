@@ -6,7 +6,7 @@ const [url,out]=process.argv.slice(2),result={passed:false,frames:[]};
 const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
 try{
  const page=await browser.newPage({viewport:{width:1280,height:800},deviceScaleFactor:2});
- await page.goto(url);await page.waitForFunction(()=>window.ballance?.gpu.frames>30,null,{timeout:0});
+ const target=new URL(url);target.searchParams.set('renderer','webgpu');await page.goto(target.href);await page.waitForFunction(()=>window.ballance?.gpu.frames>30,null,{timeout:0});
  const advance=async n=>{const t=await page.evaluate(n=>ballance.gpu.frames+n,n);await page.waitForFunction(t=>ballance.gpu.frames>=t,t,{timeout:0})};
  const key=async k=>{await page.keyboard.down(k);await advance(6);await page.keyboard.up(k);await advance(20)};
  const compare=async()=>page.evaluate(()=>new Promise((resolve,reject)=>{

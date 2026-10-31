@@ -7,7 +7,7 @@ const result={browser:browser.version(),phases:[]};
 const browserCdp=await browser.newBrowserCDPSession();
 try{
  const page=await browser.newPage({viewport:{width:1280,height:800},deviceScaleFactor:2});
- await page.goto(url);await page.waitForFunction(()=>window.ballance?.gpu.frames>30,null,{timeout:0});
+ const target=new URL(url);target.searchParams.set('renderer','webgpu');await page.goto(target.href);await page.waitForFunction(()=>window.ballance?.gpu.frames>30,null,{timeout:0});
  const advance=async n=>{const t=await page.evaluate(n=>ballance.gpu.frames+n,n);await page.waitForFunction(t=>ballance.gpu.frames>=t,t,{timeout:0})};
  const key=async k=>{await page.keyboard.down(k);await advance(6);await page.keyboard.up(k);await advance(20)};
  await page.focus('#canvas');await key('Enter');await key('Enter');await advance(180);await key('q');await advance(180);await key('a');
