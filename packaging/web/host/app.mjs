@@ -151,7 +151,7 @@ async function importFiles(input,directory,extension){
     }catch(error){storage('导入失败：'+error.message)}finally{input.value=''}
 }
 function showRestart(message){
-    running=false;clearInterval(timer);
+    running=false;clearInterval(timer);$('loading-screen').hidden=true;
     for(const id of ['load-record','inspect','apply','undo','save-record','play-record'])$(id).disabled=true;
     $('stage').classList.add('ended');$('restart-screen').hidden=false;status(message);
 }
@@ -159,7 +159,7 @@ async function startGame(){
     status('正在准备资源…');
     try{
         await cachePreparation;
-        status('正在启动游戏…');
+        status('正在启动游戏…');$('loading-status').textContent='正在启动游戏…';
         const manifest=await(await fetch('./assets.json')).json();
         gpu=await createBallanceGpu($('canvas'),await(await fetch('./shaders.json')).json());
         const {default:createPlayer}=await import('./PlayerBrowser.mjs');
@@ -187,6 +187,22 @@ async function startGame(){
             }
             player.FS.writeFile(marker,'A/Z defaults migrated');
         }
+        // Apply the new browser overlay defaults once, including existing profiles.
+        // Subsequent choices made in the plugin menu remain untouched.
+        const overlayMarker='/user/.web-overlays-v1';
+        if(!player.FS.analyzePath(overlayMarker).exists){
+            for(const [name,key] of [['Segment','Enabled?'],['BallanceTAS','ShowOSD']]){
+                const path='/user/ModLoader/Configs/'+name+'.cfg';
+                if(player.FS.analyzePath(path).exists){
+                    const lines=player.FS.readFile(path,{encoding:'utf8'}).split('\n');
+                    player.FS.writeFile(path,lines.map(line=>{
+                        const parts=line.trim().split(/\s+/);
+                        return parts[0]==='B'&&parts[1]===key ? line.replace(/([01])\s*$/,'0') : line;
+                    }).join('\n'));
+                }
+            }
+            player.FS.writeFile(overlayMarker,'Browser overlays default off');
+        }
         player.FS.mkdirTree('/game/Bin');let cursor=0;
         await Promise.all(Array.from({length:8},async()=>{
             while(cursor<manifest.assets.length){
@@ -204,7 +220,7 @@ async function startGame(){
         running=true;resizeGame();gpu.setSamples(Number($('samples').value));
         for(const id of ['maps','tapes','save','refresh'])$(id).disabled=false;
         timer=setInterval(()=>{void persist().catch(()=>{})},10000);
-        await persist();status('');$('canvas').focus();
+        await persist();status('');$('loading-screen').hidden=true;$('canvas').focus();
         // Keep introspection available for local acceptance tests and diagnostics.
         window.ballance={player,gpu,get running(){return running},persist};
     }catch(error){showRestart('无法启动：'+error.message);console.error(error)}
@@ -237,10 +253,10 @@ if('serviceWorker' in navigator){
             progress.hidden=false;
             if(data.totalBytes!==null&&data.totalBytes>0){
                 progress.max=data.totalBytes;progress.value=data.cacheBytes;
-                $('offline').textContent='离线资源：'+(data.cacheBytes/1e6).toFixed(1)+' / '+(data.totalBytes/1e6).toFixed(1)+' MB';
+                $('loading-status').textContent='离线资源：'+(data.cacheBytes/1e6).toFixed(1)+' / '+(data.totalBytes/1e6).toFixed(1)+' MB';
             }else{
                 progress.max=data.total;progress.value=data.cacheProgress;
-                $('offline').textContent='离线资源：'+data.cacheProgress+' / '+data.total+' 个文件';
+                $('loading-status').textContent='离线资源：'+data.cacheProgress+' / '+data.total+' 个文件';
             }
         }
     });

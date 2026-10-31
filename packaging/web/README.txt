@@ -225,7 +225,8 @@ the decompressed recording. Responsive qualification also checks desktop sidebar
 space reservation, Esc closing, narrow-screen overlay, DPR changes and no idle
 resize loop. This host-only iteration did not rerun the full TAS corpus.
 
-The status and offline download progress live in the toolbar. The canvas fills
+Status stays in the toolbar; initial download progress is centered over the game
+viewport until startup completes. The canvas fills
 all remaining viewport space without outer padding; the right tools sidebar
 retains its desktop split/narrow overlay behavior. serve.py defaults to loopback
 port18766; retain that origin when updating so IndexedDB data stays accessible.
@@ -243,3 +244,22 @@ peaks; it does not prove physical speaker output. The reported M4 Chrome held-ke
 audio freeze was not reproduced on the local M5 Pro Chrome156 environment.
 Navigation keys explicitly suppress browser defaults on repeats while all SDL
 key events and held-key sampling remain intact.
+
+Browser overlay defaults and compact vertex streams (2026-11-01):
+Segment General/Enabled? and BallanceTAS OSD/ShowOSD default off for Wasm.
+The host migrates existing profiles once (.web-overlays-v1), then preserves all
+subsequent choices from the plugin menu. ShowBallPanel and ShowInputPanel remain
+individual controls beneath the TAS OSD master switch. Native defaults unchanged.
+Normal play selects fast physics; an active/pending/paused TAS timeline selects
+strict x87. These presentation changes do not change simulation or render timing.
+
+Varying attributes use a compact stream; missing attributes use one instance-rate
+record of the shader's exact default bits. Wasm views are copied immediately into
+staging arenas, removing the intermediate per-draw JS slice. Pipeline cache keys
+include the attribute mask/stride. qualify-vertex-packing.mjs URL result.json
+replays actual menu/level frames using dense vs compact layouts and compares GPU
+readback pixels at 1x/4xMSAA. E3927: zero different bytes in four comparisons.
+E3928 isolated first-level Chrome156/M5Pro/60Hz/DPR2: total process CPU about42-43%
+to37-39% (100%=onecore); main-thread task25-27% to20%. Upload bytes/frame fall from
+3.91-4.71MB to1.06-1.32MB. Includes overlay default changes and profiler overhead;
+not an absolute comparison with native or a measurement of the user's M4 setup.

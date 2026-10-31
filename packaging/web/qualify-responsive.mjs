@@ -38,7 +38,7 @@ try{
   g.beginDraw=(...args)=>{
    if(menuFrame!==g.frames){menuFrame=g.frames;menuQuads=[]}
    if(args[1])for(let base=0;base+4<=args[4];base+=4){const v=new DataView(args[3].buffer,args[3].byteOffset,args[3].byteLength),xs=[],ys=[];
-    for(let i=0;i<4;++i){xs.push(v.getFloat32((base+i)*256,true));ys.push(v.getFloat32((base+i)*256+4,true))}
+    for(let i=0;i<4;++i){xs.push(v.getFloat32((base+i)*(args[9]??256),true));ys.push(v.getFloat32((base+i)*(args[9]??256)+4,true))}
     const x=Math.min(...xs),y=Math.min(...ys),w=Math.max(...xs)-x,h=Math.max(...ys)-y;
     if(w>100&&h>30&&w/h>2&&w/h<10&&Math.abs(x+w/2-document.querySelector('canvas').clientWidth/2)<10)menuQuads.push({x,y,w,h});
    }return original(...args);
