@@ -17,6 +17,16 @@ The following environment variables can override build inputs:
 - `BML_PLUS_ROOT`
 - `BML_PLUS_LIBRARY`
 - `BML_PLUS_DEFAULTS`
+- `BML_PRACTICE_TOOLS`
+- `BML_SPEEDRUN_SHORTCUTS`
+- `BALLANCE_TAS_MOD`
+- `BML_LEGACY_TAS_RUNTIME`
+
+The bundle includes the matching native PracticeTools, SpeedrunShortcuts,
+BallanceTAS and LegacyTASRuntime modules. The launcher updates only these managed
+binaries, preserving user maps, scores, configuration and third-party modules.
+For an isolated test installation, set `BALLANCE_USER_DATA_DIR` before launching.
+The current build targets macOS 15 or newer on Apple Silicon.
 
 Mutable state is stored under
 `~/Library/Application Support/Ballance`; the application bundle remains

@@ -3,7 +3,7 @@
 	url = https://github.com/gzz2000/BallancePlayer.git
 [submodule "Source/VxMath"]
 	path = Source/VxMath
-	url = https://github.com/doyaGu/VxMath.git
+	url = https://github.com/gzz2000/VxMath.git
 [submodule "Source/CK2"]
 	path = Source/CK2
 	url = https://github.com/gzz2000/CK2.git
@@ -15,13 +15,13 @@
 	url = https://github.com/gzz2000/CKBuildingBlocks.git
 [submodule "Source/Plugins"]
 	path = Source/Plugins
-	url = https://github.com/doyaGu/CKPlugins.git
+	url = https://github.com/gzz2000/CKPlugins.git
 [submodule "Source/Managers/ParameterOperations"]
 	path = Source/Managers/ParameterOperations
 	url = https://github.com/doyaGu/CKParameterOperations.git
 [submodule "Source/Managers/SdlInputManager"]
 	path = Source/Managers/SdlInputManager
-	url = https://github.com/doyaGu/SdlInputManager.git
+	url = https://github.com/gzz2000/SdlInputManager.git
 [submodule "Source/Managers/SdlSoundManager"]
 	path = Source/Managers/SdlSoundManager
-	url = https://github.com/doyaGu/SdlSoundManager.git
+	url = https://github.com/gzz2000/SdlSoundManager.git

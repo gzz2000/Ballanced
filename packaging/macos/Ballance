@@ -6,7 +6,7 @@ resources_dir="$contents_dir/Resources"
 game_dir="$resources_dir/Game"
 defaults_dir="$resources_dir/Defaults"
 factory_database="$defaults_dir/Database.tdb"
-data_dir="$HOME/Library/Application Support/Ballance"
+data_dir="${BALLANCE_USER_DATA_DIR:-$HOME/Library/Application Support/Ballance}"
 
 mkdir -p \
   "$data_dir/ModLoader/Maps" \
@@ -14,6 +14,7 @@ mkdir -p \
   "$data_dir/ModLoader/Configs" \
   "$data_dir/ModLoader/Fonts" \
   "$data_dir/ModLoader/Themes" \
+  "$data_dir/ModLoader/TAS" \
   "$data_dir/Screenshots"
 
 # Early native builds accidentally treated Windows backslashes as filename
@@ -57,6 +58,17 @@ if [[ -d "$defaults_dir/ModLoader" ]]; then
     [[ -e "$destination" ]] || cp "$source" "$destination"
   done < <(find "$defaults_dir/ModLoader" -type f -print0)
 fi
+
+# These native binaries are maintained as part of this application build.
+# Refresh them when the bundle changes while leaving every third-party mod
+# entirely under the user's control.
+for managed_mod in PracticeTools.bmodp SpeedrunShortcuts.bmodp BallanceTAS.bmodp LegacyTASRuntime.bmodp; do
+  source="$defaults_dir/ModLoader/Mods/$managed_mod"
+  destination="$data_dir/ModLoader/Mods/$managed_mod"
+  if [[ -f "$source" ]] && ! cmp -s "$source" "$destination"; then
+    cp "$source" "$destination"
+  fi
+done
 
 exec "$game_dir/Bin/Player" \
   --root-path "$game_dir" \

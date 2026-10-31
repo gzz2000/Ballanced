@@ -21,11 +21,11 @@
     <key>CFBundleShortVersionString</key>
     <string>0.3.14-native</string>
     <key>CFBundleVersion</key>
-    <string>2</string>
+    <string>20261031.1</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.games</string>
     <key>LSMinimumSystemVersion</key>
-    <string>14.0</string>
+    <string>15.0</string>
     <key>LSMultipleInstancesProhibited</key>
     <true/>
     <key>NSHighResolutionCapable</key>

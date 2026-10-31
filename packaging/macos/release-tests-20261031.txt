@@ -1,0 +1,35 @@
+Ballance native arm64 trial build, 2026-10-31
+Deployment: macOS15+, Metal via SDL_GPU. Runtime includes native BML+, PracticeTools,
+BallanceTAS, LegacyTASRuntime and SpeedrunShortcuts. No Wine or Rosetta dependency.
+
+Verified current source candidate (E3385):
+31 established original-reference recordings finish with exact eligible player/core
+states, raw physics clocks and gameplay scores. Three overwritten checkpoints and
+six restores per tape:93captures186restores. 30 tapes passed the90s harness budget;
+HS12 gameplay/restore passed but its bonus scoreboard was truncated by timed exit.
+Independent180s repeat (E3726/E3727) settles correctly at9670. Initial failed
+final-score check is retained; no state/score comparison was weakened.
+
+Unit coverage:344CPU engine CTest entries including sound snapshot,2Metal GPU
+suites separately executed;84native BML CTest entries;28TAS entries including
+actual CK2/Toolbox counter integration;11standalone checkpoint/render fixtures.
+Tests cover specific fields and boundaries, not proof of every possible world state.
+
+Four diagnostic native default-profile recordings currently do not finish:
+HS09_6170 (author requires additional B overlay), HS13_8484 (lost environment),
+SR03_1.46.066 (author A second-play contract), SR09_1.29.321 (lost environment).
+Native SR03 reproduces the observed original A failed first-play trajectory.
+These are not counted among31passes. User acceptance now targets tapes playable
+in standard environment A, not repairing recordings that fail in A itself.
+
+Release remains a trial build. Full-world failure-atomic restore, arbitrary
+third-party mod private state, all13levels visual inspection and testing on a
+separate macOS15 machine remain open. Local macOS26.7.1 smoke tests do not prove15.
+
+Data: ~/Library/Application Support/Ballance
+- Database.tdb: highscores
+- ModLoader/Configs: BML/mod settings
+- ModLoader/Maps: custom maps
+- ModLoader/TAS: recordings
+PracticeTools defaults: F5 save, F8 restore; Tab temporarily bypasses practice cap.
+Use BML mod settings to inspect/customize bindings. Checkpoints stay in memory.
