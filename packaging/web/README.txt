@@ -282,3 +282,35 @@ but no cache clearing or closing every tab. Later versions update with one refre
 Qualification: node qualify-updates.mjs LEGACY_SITE CANDIDATE_SITE result.json
 uses one fresh profile across versions, a retained old tab, a worker restart,
 offline reload, a deliberately corrupt update and subsequent old-cache collection.
+
+Responsive HUD and visual record editing (2026-11-01):
+CKRenderEngine shares the authored 4:3 UI rectangle with both 2D roots;
+CKBuildingBlocks screen-relative text uses that root extent. Nested score/life
+HUD and menu glyphs now scale together without narrowing the 3D viewport.
+qualify-hud.mjs URL OUTPUT captures actual paused-level draw packets, compares
+width-only translation, return-to-4:3, and clicks the resized Options button.
+
+BallanceWeb by gzz2000 shows the actual fast/strict solver in its header. TAS
+status is hidden while idle, shows sample progress while playing, and can stop
+active or pending playback. Browser playback defaults to one pass; EOF returns
+to fast mode rather than rearming the tape. New defaults migrate once.
+The editor uses a virtualized sample/key grid with selection, paint strokes,
+column/range fill, per-sample timing, one-step undo and .tas copy saving. One
+stroke is one undo transaction; other key bits, legacy flags and original timing
+are preserved. Enter is a legacy reserved bit, not a consumed replay input.
+Editing is allowed only at the menu; the table is read-only during a level.
+qualify-tas-editor.mjs URL OUTPUT TAPE checks real pointer/keyboard editing,
+bit-exact undo/file roundtrip, long-tape scrolling, EOF, active/pending stop.
+
+profile-checkpoints.mjs URL CORPUS OUTPUT CASE... measures net mallinfo live bytes
+at the checkpoint boundary, separately from Wasm heap reservation. Optional
+BALLANCE_PROFILE_BATCH=64 uses a disposable host override for catch-up profiling;
+normal gameplay remains unchanged. E3947: levels1/2/10 first snapshot retained
+34.83/36.87/36.87MiB in both fast/strict modes. Later overwrites retain a 3-4MiB
+CK-value scratch bank. E3948 isolated HS02: capture105-113ms, restore373-470ms,
+2048 strict samples in536ms with rendering once per64-sample batch (Chrome156,
+M5Pro). These are net allocations, not a serialized payload or measurements of
+multiple simultaneous snapshots. No automatic checkpoint index was implemented.
+Current ownership/exclusion tracks one snapshot plus scratch bank; a future bank
+must exclude every retained snapshot's CK storage, bound memory, invalidate all
+checkpoints at/after the earliest edited sample, and prove rewind/replay parity.

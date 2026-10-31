@@ -1,3 +1,4 @@
+import {createTASGrid} from './tas-grid.mjs';
 import {createBallanceGpu} from './webgpu.mjs';
 const $=id=>document.getElementById(id);
 // Automatic startup may precede permission to play audio. Resume the existing
@@ -9,7 +10,7 @@ function resumeAudio(){
 for(const type of ['pointerdown','keydown'])window.addEventListener(type,resumeAudio,true);
 // SDL listens on window. Form typing must not become game input, but key-up
 // still reaches SDL so a held game key released over a form cannot get stuck.
-for(const type of ['keydown','keypress'])window.addEventListener(type,event=>{
+for(const type of ['keydown','keypress'])document.addEventListener(type,event=>{
     // Navigation keys belong to the game even during OS key repeat. SDL may
     // decline a repeated edge; that must not re-enable browser scroll/defaults.
     // Keep delivering every event to SDL and never clear the held physical key.
@@ -25,7 +26,7 @@ for(const type of ['keydown','keypress'])window.addEventListener(type,event=>{
         }
         event.stopImmediatePropagation();
     }
-},true);
+});
 let player,gpu,running=false,userReady=false,syncTail=Promise.resolve(),timer,restartNeedsSave=false;
 const status=text=>{$('status').textContent=text};
 const storage=text=>{$('storage').textContent=text};
@@ -132,6 +133,7 @@ $('toggle-sidebar').onclick=()=>setSidebar($('sidebar').hidden);
 $('close-sidebar').onclick=()=>setSidebar(false);
 const tabs=['display','data','editor'];
 function selectTab(name,focus=false){
+    document.body.classList.toggle('editor-open',name==='editor');
     for(const tab of tabs){const active=tab===name,button=$('tab-'+tab);button.setAttribute('aria-selected',String(active));button.tabIndex=active?0:-1;$(tab==='editor'?'editor':'panel-'+tab).hidden=!active}
     if(name==='data'&&userReady)listFiles();
     if(focus)$('tab-'+name).focus();
@@ -151,7 +153,8 @@ async function importFiles(input,directory,extension){
     }catch(error){storage('导入失败：'+error.message)}finally{input.value=''}
 }
 function showRestart(message){
-    running=false;clearInterval(timer);$('loading-screen').hidden=true;
+    running=false;clearInterval(timer);clearInterval(runtimeTimer);$('loading-screen').hidden=true;
+    $('solver-status').textContent='解算器 —';$('tas-status').textContent='TAS 未回放';$('tas-status').disabled=true;$('tas-status').hidden=true;grid.setEditable(false);
     for(const id of ['load-record','inspect','apply','undo','save-record','play-record'])$(id).disabled=true;
     $('stage').classList.add('ended');$('restart-screen').hidden=false;status(message);
 }
@@ -203,6 +206,11 @@ async function startGame(){
             }
             player.FS.writeFile(overlayMarker,'Browser overlays default off');
         }
+        const once='/user/.web-tas-once-v1',tasConfig='/user/ModLoader/Configs/BallanceTAS.cfg';
+        if(!player.FS.analyzePath(once).exists){
+            if(player.FS.analyzePath(tasConfig).exists)player.FS.writeFile(tasConfig,player.FS.readFile(tasConfig,{encoding:'utf8'}).replace(/B AutoRestart 1\b/,'B AutoRestart 0'));
+            player.FS.writeFile(once,'Browser replay stops at completion');
+        }
         player.FS.mkdirTree('/game/Bin');let cursor=0;
         await Promise.all(Array.from({length:8},async()=>{
             while(cursor<manifest.assets.length){
@@ -223,6 +231,7 @@ async function startGame(){
         await persist();status('');$('loading-screen').hidden=true;$('canvas').focus();
         // Keep introspection available for local acceptance tests and diagnostics.
         window.ballance={player,gpu,get running(){return running},persist};
+        updateRuntimeStatus();runtimeTimer=setInterval(updateRuntimeStatus,250);
     }catch(error){showRestart('无法启动：'+error.message);console.error(error)}
 }
 $('restart').onclick=async()=>{
@@ -311,33 +320,58 @@ function refreshRecords(){
         const option=document.createElement('option');option.value=file.path;option.textContent=file.path.split('/').pop();$('records').append(option);
     }
     if([...$('records').options].some(o=>o.value===previous))$('records').value=previous;
-    $('load-record').disabled=$('play-record').disabled=!running||!$('records').value;
+    $('load-record').disabled=$('play-record').disabled=!running||lastRuntime?.editable===false||!$('records').value;
 }
 const call=(name,types=[],args=[],result='number')=>player.ccall('BML_WebTAS'+name,result,types,args);
 const error=()=>call('Error',[],[],'string');
+let runtimeTimer=null,lastRuntime=null;
+const grid=createTASGrid($('record-grid'),{call,
+    onSelection(first,last){$('first').value=first;$('last').value=last;$('grid-selection').textContent=first===last?'采样 '+first:first+'–'+last+' · '+(last-first+1)+' 次'},
+    onError(e){$('editor-status').textContent=e.message},
+    onChange(){$('editor-status').textContent='内存副本已修改；保存副本后可回放。'}
+});
+for(const mode of ['select','paint','fill'])$('mode-'+mode).onclick=()=>{
+    grid.setMode(mode);for(const m of ['select','paint','fill'])$('mode-'+m).setAttribute('aria-pressed',String(mode===m));
+    $('grid-help').textContent=mode==='select'?'选择：拖动行号或 Shift 点击，选择采样范围。':mode==='paint'?'画笔：点击或拖动按键格；一次拖动可以整体撤销。':'填充：先选采样范围，再点击按键格或列标题，统一按下或松开。';
+};
+function updateRuntimeStatus(){
+    if(!running||document.hidden)return;
+    try{
+        const state=JSON.parse(call('Status',[],[],'string'));lastRuntime=state;
+        $('solver-status').textContent=state.solver===1?'严格 x87':state.solver===0?'快速模式':'解算器 —';$('solver-status').dataset.mode=state.solver;
+        const labels={idle:'TAS 未回放',pending:'TAS 准备中',playing:'TAS 回放',paused:'TAS 已暂停',recording:'TAS 录制中',translating:'TAS 转换中'};
+        const text=(labels[state.state]||'TAS')+(state.canStop&&state.total?' '+state.frame+'/'+state.total:'')+(state.canStop?' · 停止':'');
+        if($('tas-status').textContent!==text)$('tas-status').textContent=text;
+        $('tas-status').disabled=!state.canStop;$('tas-status').hidden=state.state==='idle';grid.setEditable(state.editable);
+        for(const id of ['load-record','play-record'])$(id).disabled=!state.editable||!$('records').value;
+        for(const id of ['apply','undo','save-record'])$(id).disabled=!state.editable||!grid.count;
+    }catch(e){console.error(e)}
+}
+$('tas-status').onclick=()=>{try{if(!call('Stop'))throw new Error(error());updateRuntimeStatus();$('canvas').focus()}catch(e){status(e.message)}};
 function inspect(){
     const first=Number($('first').value),keys=call('Keys',['number'],[first]);
     if(keys<0)throw new Error('采样编号超出范围');
     for(const input of $('keys').querySelectorAll('input'))input.checked=!!(keys&(1<<Number(input.dataset.bit)));
     const delta=call('Delta',['number'],[first]);
     $('editor-status').textContent='采样 '+first+'：'+delta+' ms';
-    const rows=[];for(let i=first;i<first+12;++i){const k=call('Keys',['number'],[i]);if(k<0)break;rows.push(i+'  '+call('Delta',['number'],[i])+' ms  '+keyNames.filter((_,b)=>k&(1<<b)).join(' '))}
-    $('preview').textContent=rows.join('\n');
+    grid.select(first,Number($('last').value));
+    grid.refresh();
 }
 function editorAction(id,fn){$(id).onclick=async()=>{try{await fn()}catch(e){$('editor-status').textContent=e.message;console.error(e)}}}
 editorAction('load-record',()=>{
     const count=call('Load',['string'],[$('records').value]);if(count<0)throw new Error(error());
     $('record-info').textContent=count+' 次采样';$('first').max=$('last').max=count-1;$('first').value=$('last').value=0;
     for(const id of ['inspect','apply','undo','save-record'])$(id).disabled=false;
+    grid.load(count);
     $('copy-name').value=$('records').value.split('/').pop().replace(/\.tas$/, '-edited.tas');inspect();
 });
-editorAction('inspect',inspect);
+editorAction('inspect',()=>{inspect();grid.select(Number($('first').value),Number($('last').value),true)});
 editorAction('apply',()=>{
     const keys=[...$('keys').querySelectorAll('input')].reduce((mask,i)=>mask|(i.checked?1<<Number(i.dataset.bit):0),0);
     if(!call('SetRange',['number','number','number','number'],[Number($('first').value),Number($('last').value),keys,Number($('delta').value)]))throw new Error(error());
-    inspect();$('editor-status').textContent='修改已应用到内存副本，原文件未覆盖。';
+    grid.refresh();inspect();$('editor-status').textContent='修改已应用到内存副本，原文件未覆盖。';
 });
-editorAction('undo',()=>{if(!call('Undo'))throw new Error('没有可撤销的修改');inspect()});
+editorAction('undo',()=>{if(!call('Undo'))throw new Error('没有可撤销的修改');grid.refresh();inspect()});
 editorAction('save-record',async()=>{
     const name=$('copy-name').value;if(!name.endsWith('.tas')||/[\\/\0]/.test(name))throw new Error('请输入 .tas 副本文件名');
     const path='/user/ModLoader/TAS/'+name;
@@ -346,7 +380,7 @@ editorAction('save-record',async()=>{
 });
 editorAction('play-record',()=>{
     if(!call('Play',['string','number'],[$('records').value,Number($('level').value)]))throw new Error(error());
-    $('editor-status').textContent='已启动严格模式回放。F3 停止；Esc 是录像中的游戏暂停键。';$('canvas').focus();
+    $('editor-status').textContent='已启动严格模式回放。点击标题栏回放状态可停止；播完自动退出回放。';$('canvas').focus();updateRuntimeStatus();
 });
 
 void startGame();

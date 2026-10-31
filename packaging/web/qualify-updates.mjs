@@ -60,8 +60,18 @@ try{
  await context.setOffline(true);await page.reload();await ready(page,c.version);
  if(await page.evaluate(()=>ballance.player.FS.readFile('/user/upgrade-sentinel.txt',{encoding:'utf8'}))!=='keep-user-data')throw new Error('Offline user data lost');step('offline refresh retains current layout and user data');
  await context.setOffline(false);active=d;await page.reload();await ready(page,c.version);
- const failed=await page.evaluate(async()=>({caches:await caches.keys(),errors:ballance.gpu.errors}));
- if(failed.caches.includes('ballanced-web-'+d.version)||failed.errors.length)throw new Error('Failed update replaced valid cache');step('corrupt update rolls back',failed);
+ // The navigation's implicit update check can retry D after the host already
+ // fell back to C. Wait for that installing worker to settle before asserting
+ // that its temporary cache has been removed (a temporary cache is not active).
+ let failed;const failureDeadline=Date.now()+30000;
+ for(;;){
+  failed=await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {caches:await caches.keys(),errors:ballance.gpu.errors,installing:r.installing?.state,waiting:r.waiting?.state}});
+  if(!failed.installing&&!failed.waiting&&!failed.caches.includes('ballanced-web-'+d.version))break;
+  if(Date.now()>failureDeadline)throw new Error('Corrupt candidate did not settle: '+JSON.stringify(failed));
+  await new Promise(r=>setTimeout(r,100));
+ }
+ const activeAfterFailure=await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return new Promise((resolve,reject)=>{const c=new MessageChannel(),t=setTimeout(()=>reject(Error('VERSION timeout')),3000);c.port1.onmessage=e=>{clearTimeout(t);c.port1.close();resolve(e.data.version)};r.active.postMessage({type:'VERSION'},[c.port2])})});
+ if(activeAfterFailure!==c.version||failed.errors.length)throw new Error('Failed update replaced valid cache: '+JSON.stringify({failed,activeAfterFailure}));step('corrupt update rolls back',{...failed,activeAfterFailure});
  if(!await oldTab.locator('#update-game').isVisible())throw new Error('No update action in the old running tab');
  await oldTab.evaluate(()=>ballance.player.FS.writeFile('/user/update-button-sentinel.txt','saved-before-update'));
  await oldTab.click('#update-game');await ready(oldTab,c.version);

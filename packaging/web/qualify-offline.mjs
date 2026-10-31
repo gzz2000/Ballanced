@@ -55,7 +55,7 @@ try{
   await page.selectOption('#records',{label:tapePath.split('/').pop()});await page.click('#load-record');
   await page.waitForFunction(()=>document.querySelector('#record-info').textContent.includes('次采样'),{},{timeout:0});
   result.edit=await page.evaluate(()=>({first:ballance.player._BML_WebTASKeys(0),delta:ballance.player._BML_WebTASDelta(0)}));
-  await page.fill('#first','10');await page.fill('#last','12');await page.click('#inspect');
+  await page.locator('#range-tools').evaluate(e=>e.open=true);await page.fill('#first','10');await page.fill('#last','12');await page.click('#inspect');
   await page.locator('#keys input').first().check();await page.fill('#delta','4.25');await page.click('#apply');
   result.edit.changed=await page.evaluate(()=>({keys:ballance.player._BML_WebTASKeys(10),delta:ballance.player._BML_WebTASDelta(10)}));
   if(!(result.edit.changed.keys&1)||result.edit.changed.delta!==4.25)throw new Error('Editor range did not apply');

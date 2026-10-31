@@ -11,7 +11,7 @@
     },
     "BallanceTAS": {
       "repository": "https://github.com/gzz2000/BallanceTAS.git",
-      "commit": "d2fa580176e1246a1500a547bcc9a568163d01b0",
+      "commit": "6db3f326b14f7fb4b18d1fe5fd5ecc1966874943",
       "branch": "web-port"
     }
   }
