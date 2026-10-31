@@ -145,12 +145,12 @@ BML's own menus remain available. Windows binary .bmodp mods cannot be loaded as
 WASM; native plugins must be ported and linked into the build. User settings,
 Database.tdb, maps and recordings live in IndexedDB, never in the cached assets.
 Automatic synchronization runs every ten seconds and on page backgrounding;
-use "立即保存数据" or "退出并保存" before closing, and download important files for
+use "立即保存" or the game Exit menu before closing, and download important files for
 backup. Browser eviction/clearing site data can remove both caches and saves.
 
 The service worker hashes every asset before activating a complete new version.
-It does not force-replace a running version. Close all tabs of the origin to
-activate a pending upgrade. Once the page reports its offline cache ready, the
+Existing games retain their release; a refresh starts the verified new version.
+No cache clearing is needed. Once the page reports its offline cache ready, the
 same URL works offline. Game assets and runtime are versioned together; user data
 is separate and survives runtime/cache updates.
 
@@ -263,3 +263,22 @@ E3928 isolated first-level Chrome156/M5Pro/60Hz/DPR2: total process CPU about42-
 to37-39% (100%=onecore); main-thread task25-27% to20%. Upload bytes/frame fall from
 3.91-4.71MB to1.06-1.32MB. Includes overlay default changes and profiler overhead;
 not an absolute comparison with native or a measurement of the user's M4 setup.
+
+Atomic cached-page upgrades (2026-11-01):
+HTML/CSS/JS/Wasm/assets are all included in the version manifest. The previous
+worker stayed waiting while an old page was open; a refresh could keep serving
+the old HTML indefinitely. A fully verified installation now activates directly.
+Per-document cache pins in a separate CacheStorage metadata cache keep existing
+games on their own release, even after worker eviction; the next navigation gets
+the new release. Closed document pins/unused old caches are collected at activation.
+IndexedDB is never cleared. A failed checksum/install keeps the active release.
+
+The host explicitly checks for an update on each load (updateViaCache:none), waits
+for installation, compares the document stamp with the active worker and reloads
+before engine startup if needed. Already-running upgraded hosts display an Update
+and Restart button, which persists user files before reload. Legacy hosts that
+predate this protocol need a refresh after the first new installation completes,
+but no cache clearing or closing every tab. Later versions update with one refresh.
+Qualification: node qualify-updates.mjs LEGACY_SITE CANDIDATE_SITE result.json
+uses one fresh profile across versions, a retained old tab, a worker restart,
+offline reload, a deliberately corrupt update and subsequent old-cache collection.

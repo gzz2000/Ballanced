@@ -240,6 +240,12 @@ $('maps').onchange=()=>importFiles($('maps'),'/user/ModLoader/Maps','.nmo');
 $('tapes').onchange=()=>importFiles($('tapes'),'/user/ModLoader/TAS','.tas');
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&userReady)void persist().catch(()=>{})});
 
+const documentVersion=document.querySelector('meta[name="ballance-build"]').content;
+$('update-game').onclick=async()=>{
+    $('update-game').disabled=true;
+    try{if(userReady)await persist();location.reload()}
+    catch(error){status('保存失败，尚未更新：'+error.message);$('update-game').disabled=false}
+};
 // An active worker means every versioned game/runtime asset was cached and
 // checked successfully. A failed install never replaces the previous version.
 const cachePreparation=(async()=>{
@@ -248,6 +254,9 @@ if('serviceWorker' in navigator){
     const progress=$('cache-progress');
     navigator.serviceWorker.addEventListener('message',event=>{
         const data=event.data;
+        if(data?.cacheActivated&&data.cacheActivated!==documentVersion){
+            $('update-game').hidden=false;$('offline').textContent='新版本已就绪';
+        }
         if(data?.cacheError){progress.hidden=true;$('offline').textContent='离线缓存失败：'+data.cacheError}
         else if(data?.cacheProgress!==undefined&&!cacheReady){
             progress.hidden=false;
@@ -260,12 +269,30 @@ if('serviceWorker' in navigator){
             }
         }
     });
-    return navigator.serviceWorker.register('./sw.js').then(async registration=>{
+    return navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(async registration=>{
+        // Check every document load rather than waiting for the browser's
+        // periodic SW check. Offline/update failures leave the active cache usable.
+        try{await registration.update()}catch{}
+        const installing=registration.installing||registration.waiting;
+        if(installing&&installing.state!=='activated'&&installing.state!=='redundant'){
+            await new Promise(resolve=>{
+                const changed=()=>{if(installing.state==='activated'||installing.state==='redundant'){installing.removeEventListener('statechange',changed);resolve()}};
+                installing.addEventListener('statechange',changed);changed();
+            });
+        }
+        if(!registration.active)throw new Error('离线资源未安装完成，尝试直接加载。');
         const ready=await navigator.serviceWorker.ready;
-        cacheReady=true; // Queued install progress must not overwrite readiness.
+        const activeVersion=await new Promise(resolve=>{
+            const channel=new MessageChannel(),timeout=setTimeout(()=>{channel.port1.close();resolve(null)},3000);
+            channel.port1.onmessage=event=>{clearTimeout(timeout);channel.port1.close();resolve(event.data.version)};
+            ready.active?.postMessage({type:'VERSION'},[channel.port2]);
+        });
+        if(activeVersion&&activeVersion!==documentVersion){
+            location.reload();await new Promise(()=>{});
+        }
+        cacheReady=true;
         progress.hidden=true;$('offline').textContent='离线缓存已就绪';
         $('offline').title='下次可在没有网络时打开此页面。';
-        if(registration.waiting)$('offline').textContent+=' 新版本将在关闭本网站所有页面后启用。';
         const persistent=await navigator.storage?.persist?.();
         if(!persistent)$('offline').title+=' 浏览器仍可能在空间不足时清理网站数据，请备份存档。';
     }).catch(error=>{progress.hidden=true;$('offline').textContent='离线缓存失败：'+error.message});

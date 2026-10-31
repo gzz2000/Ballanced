@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ballance</title><link rel="stylesheet" href="style.css">
-<header><div class="brand"><strong>Ballance</strong><small>by gzz2000</small></div><div id="status-bar"><span id="status" role="status">正在准备资源…</span><span id="offline" role="status"></span></div><button id="toggle-sidebar" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">☰</span> 设置</button></header>
+<meta name="ballance-build" content="__BUILD_VERSION__"><title>Ballance</title><link rel="stylesheet" href="style.css">
+<header><div class="brand"><strong>Ballance</strong><small>by gzz2000</small></div><div id="status-bar"><span id="status" role="status">正在准备资源…</span><span id="offline" role="status"></span></div><button id="update-game" hidden>更新并重启</button><button id="toggle-sidebar" aria-controls="sidebar" aria-expanded="false"><span aria-hidden="true">☰</span> 设置</button></header>
 <main><section id="game-pane"><div id="stage"><canvas id="canvas" tabindex="0" width="640" height="480" aria-label="Ballance 游戏画面"></canvas><div id="loading-screen" role="status"><div><p id="loading-status">正在准备离线缓存…</p><progress id="cache-progress" aria-label="离线资源下载进度"></progress></div></div><div id="restart-screen" hidden><button id="restart">重新开始</button></div></div></section>
 <aside id="sidebar" aria-labelledby="sidebar-title" hidden>
 <div class="sidebar-heading"><h2 id="sidebar-title">设置</h2><button id="close-sidebar" aria-label="收起设置">✕</button></div>
