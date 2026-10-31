@@ -1,0 +1,21 @@
+Ballance native macOS trial 20261031.2
+
+Change: restore original explosion script links outside active TAS playback,
+recording, translation and paused editing sessions. TAS keeps its original
+no-debris profile; graph changes are reversible without creating objects during
+play or copying stale pointers after an object is deleted.
+
+Tests: actual CK graph switching/reconciliation (3 ball types, repeated toggles),
+29 TAS test executables, and in-game original explosion graphs with TAS enabled
+but idle: Wood 16, Paper 18, Stone 17 Physicalize callbacks. Previous module,
+same fixture: 0, 0, 0. HS02 absorbed-satellite rewind: exact traces before trigger,
+mid-flight, overwrites and repeated restores. HS08/SR08 reference trajectories
+unchanged. See workspace experiment notes for full corpus results.
+
+Open: user reports ordinary play levels 9/10 satellites stop chasing after
+rewinding an absorbed future. Not reproduced. Controlled ordinary-mode actual
+Extra function fixture (synthetic target, separate from level trigger graphs)
+recaptures all 6 satellites at identical ticks on levels 2/9/10. Levels 2/10
+pass 4306 checks each. Level 9 has a child-animation position difference, although
+node trajectories, absorption ticks and scores match; NOT full visual parity.
+No speculative collectible-runtime change is included in this trial.
