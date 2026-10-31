@@ -8,6 +8,10 @@ defaults_dir="$resources_dir/Defaults"
 factory_database="$defaults_dir/Database.tdb"
 data_dir="${BALLANCE_USER_DATA_DIR:-$HOME/Library/Application Support/Ballance}"
 
+# Run before seeding defaults, so genuine legacy settings retain precedence.
+# Conflicting native files are retained and the legacy copy is backed up.
+"$contents_dir/MacOS/MigrateUserData" "$data_dir"
+
 mkdir -p \
   "$data_dir/ModLoader/Maps" \
   "$data_dir/ModLoader/Mods" \
@@ -16,15 +20,6 @@ mkdir -p \
   "$data_dir/ModLoader/Themes" \
   "$data_dir/ModLoader/TAS" \
   "$data_dir/Screenshots"
-
-# Early native builds accidentally treated Windows backslashes as filename
-# characters. Preserve those settings without rewriting the user's chosen
-# frame cap: BML Plus also uses explicit caps for slow-motion practice.
-legacy_bml_config="$data_dir/ModLoader\\Configs\\BML.cfg"
-native_bml_config="$data_dir/ModLoader/Configs/BML.cfg"
-if [[ ! -e "$native_bml_config" && -f "$legacy_bml_config" ]]; then
-  cp "$legacy_bml_config" "$native_bml_config"
-fi
 
 # Preserve scores from a legacy bundle that was updated in place or from the
 # earlier Wine bundle on the first native launch. Otherwise seed the writable

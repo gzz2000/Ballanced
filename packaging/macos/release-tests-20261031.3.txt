@@ -1,0 +1,22 @@
+Ballance native macOS trial 20261031.3
+
+Fix: TAS SavestateManager uses the same configured external root as recordings
+and scripts, instead of creating a literal Windows-relative directory. POSIX
+fallback paths use native separators.
+
+The app includes an arm64 migration helper, run before default files are seeded.
+It merges legacy ModLoader backslash paths and the literal ..\ModLoader\TAS\
+folder into the normal external ModLoader tree. Native destinations win conflicts;
+differing legacy files are retained under LegacyPathConflicts. Identical copies
+are deduplicated. PathMigration.log records moves. No Python/Xcode is required
+on the receiving Mac. Scores and maps are preserved; nothing is moved outside
+the selected user-data root.
+
+Validation: 7 migration fixture tests (Unicode/spaces, nested paths, conflicts,
+idempotence, concurrent launches, type collisions, symlinks and parent traversal);
+29 TAS test executables; packaged legacy config/theme/JSON migration and restart
+without re-creating malformed names; packaged HS02 recording/config migration,
+startup discovery and successful completion. Tests use isolated user-data roots.
+Actual local Application Support migration retained every original file hash.
+Previous release's gameplay/physics binaries and PracticeTools are unchanged;
+full31 reference corpus was qualified on20261031.2, not rerun for this path fix.

@@ -63,6 +63,9 @@ cp "$package_dir/Info.plist" "$contents/Info.plist"
 cp "$package_dir/Ballance" "$contents/MacOS/Ballance"
 cp "$package_dir/Resources/BallanceNative.icns" "$resources/BallanceNative.icns"
 chmod +x "$contents/MacOS/Ballance"
+/usr/bin/clang++ -std=c++17 -Os -arch arm64 -mmacosx-version-min=15.0 \
+  "$package_dir/MigrateUserData.cpp" -o "$contents/MacOS/MigrateUserData"
+codesign --force --sign - "$contents/MacOS/MigrateUserData"
 
 homebrew_sdl='/opt/homebrew/opt/sdl3/lib/libSDL3.0.dylib'
 while IFS= read -r -d '' binary; do
