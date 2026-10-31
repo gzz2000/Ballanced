@@ -390,7 +390,10 @@ The shader source is the same verified native SPIR-V pack, using the existing
 LOD-derivative lowering. GLSL 330 is an intermediate; the generator targets
 GLSL ES 3.00, fixes clip depth, matches varying names and substitutes actual
 allocated mip counts for textureQueryLevels. Uniform data/texture slots keep
-the CKFFPLib ABI. All six vertex/fragment combinations compile/link at startup.
+the CKFFPLib ABI. Programs compile/link on first use; normal draws select the smaller native
+hardware-sampling fragment variants. Shader border sampling and volume/compare/
+manual-anisotropy states retain the complete variants. Link failures include
+vertex/fragment names. This avoids compiling unused large shaders at startup.
 
 WebGL2 implements depth/stencil/blend/scissor, compact/default vertex attributes,
 2D/cube/volume textures and 1x/4x MSAA (limited by supported sample counts).
@@ -425,3 +428,18 @@ Renderer preference check:
 Chrome156 passes fresh WebGL2 with no adapter probe, failed-save protection,
 WebGPU switch + reload with persisted user data, replacing a diagnostic URL
 with the sidebar choice, and WebGL2 offline reopen. No engine/WASM changes.
+
+Android shader-compiler compatibility candidate (2026-11-01)
+------------------------------------------------------------
+Reported Redmi K30 Pro / Android11 / Chrome156.0.8078.73 link assertion:
+PSEUDOIMUL32 must not be seen here. No matching device is available locally.
+The previous eager links included large per-tap software filter/modulo branches.
+Reuse the checked native hardware-sampling artifacts for ordinary draws and
+compile other programs only when needed. Common fragment source drops from
+4946 to2565 lines; local menu uses only two programs/three shader modules.
+This is a workaround candidate, not a confirmed fix on that Android driver.
+No integer precision reduction, physics/WASM changes or omitted border effects.
+Local Chrome156: all12 variant combinations link, real menu/level same-frame
+WebGPU comparison and HS01 full strict TAS pass; offline caching also checked.
+Run BALLANCE_TEST_BORDER=1 with qualify-backends.mjs to force per-tap border
+sampling on captured frames and compare the retained full path against WebGPU.

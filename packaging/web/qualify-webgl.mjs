@@ -23,6 +23,8 @@ try{
      const values={samples:gpu.samples,w,h,outside:pixel(4,4),inside:pixel(64,64),edge:pixel(31,64)};
      if(String(values.outside)!=='255,0,0,255'||String(values.inside)!=='0,255,0,255'||String(values.edge)!=='255,0,0,255')throw Error(JSON.stringify(values));results.push(values);
    }
+   for(const hardware of [true,false])for(let pt=0;pt<2;pt++)for(let layout=0;layout<3;layout++)gpu.program(pt,layout,hardware);
+   gpu.checkError('all FFP variants');
    const errors=gpu.errors;gpu.shutdown();c.remove();if(errors.length)throw Error(errors.join('\n'));return results;
  });
  result.fallback=await page.evaluate(async()=>{
@@ -32,6 +34,6 @@ try{
      if(renderer.backend!=='webgl2'||!renderer.fallbackReason)throw Error('Automatic fallback failed');checks.push({name,backend:renderer.backend,reason:renderer.fallbackReason});renderer.shutdown();
    }}finally{if(descriptor)Object.defineProperty(navigator,'gpu',descriptor);else delete navigator.gpu}return checks;
  });
- result.end=await page.evaluate(()=>({frames:ballance.gpu.frames,draws:ballance.gpu.draws,errors:ballance.gpu.errors}));
+ result.end=await page.evaluate(()=>({frames:ballance.gpu.frames,draws:ballance.gpu.draws,errors:ballance.gpu.errors,programs:[...ballance.gpu.programs.keys()],shaders:Object.keys(ballance.gpu.shaders)}));
  if(result.errors.length||result.end.errors.length)throw Error('Browser/GL errors');result.passed=true;
 }catch(e){result.error=String(e.stack||e);process.exitCode=1}finally{await writeFile(out+'/result.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result));await browser.close()}

@@ -8,6 +8,7 @@ try{
  await context.route('**/app.mjs',async route=>{const r=await route.fetch();let body=await r.text();body=body.replace("$('solver-status').title=",`globalThis.textureTrace=new Map();
  for(const name of ['texture','upload','deleteTexture']){const original=gpu[name];gpu[name]=function(...args){const id=args[0];if(name==='texture')textureTrace.set(id,[[name,args]]);else if(name==='deleteTexture')textureTrace.delete(id);else textureTrace.get(id)?.push([name,args.map(v=>ArrayBuffer.isView(v)?v.slice():v)]);return original.apply(this,args)}}
  $('solver-status').title=`);await route.fulfill({response:r,body})});
+ await page.addInitScript(border=>{window.compareBorder=border},process.env.BALLANCE_TEST_BORDER==='1');
  await page.goto(url+'?renderer=webgpu');await page.waitForFunction(()=>window.ballance?.gpu.frames>45,null,{timeout:120000});
  await page.evaluate(async()=>{const {createBallanceGl}=await import('./webgl2.mjs');const c=document.createElement('canvas');globalThis.comparisonGl=await createBallanceGl(c,await(await fetch('./shaders-gl.json')).json())});
  const advance=async n=>{const t=await page.evaluate(n=>ballance.gpu.frames+n,n);await page.waitForFunction(t=>ballance.gpu.frames>=t,t,{timeout:120000})};
@@ -15,7 +16,7 @@ try{
  const compare=async()=>page.evaluate(()=>new Promise((resolve,reject)=>{
   const g=ballance.gpu,h=comparisonGl,original={},commands=[];let recording=false,depth=0;
   g.present();g.context.configure({device:g.device,format:g.format,alphaMode:'opaque',usage:GPUTextureUsage.RENDER_ATTACHMENT|GPUTextureUsage.COPY_SRC});
-  for(const name of ['clear','clearRect','beginDraw','uniform','binding','endDraw']){original[name]=g[name];g[name]=function(...args){if(recording&&!depth)commands.push([name,args.map(v=>ArrayBuffer.isView(v)||Array.isArray(v)?v.slice():v)]);++depth;try{return original[name].apply(g,args)}finally{--depth}}}
+  for(const name of ['clear','clearRect','beginDraw','uniform','binding','endDraw']){original[name]=g[name];g[name]=function(...args){if(recording&&window.compareBorder&&name==='binding'&&args[3]===0){args[2]=args[2].slice();args[2][3]=4;args[2][4]=4}if(recording&&!depth)commands.push([name,args.map(v=>ArrayBuffer.isView(v)||Array.isArray(v)?v.slice():v)]);++depth;try{return original[name].apply(g,args)}finally{--depth}}}
   const present=g.present;let started=false;
   g.present=function(){
    if(!started){started=true;recording=true;return present.call(g)}
@@ -33,7 +34,7 @@ try{
      const rgb=new Uint8ClampedArray(w*height*4);
      for(let y=0;y<height;y++)for(let x=0;x<w;x++){let delta=0;for(let c=0;c<3;c++){const v=a[y*stride+x*4+(bgra?2-c:c)];rgb[(y*w+x)*4+c]=v;const d=Math.abs(v-bytes[((height-y-1)*w+x)*4+c]);total+=d;max=Math.max(max,d);delta=Math.max(delta,d)}rgb[(y*w+x)*4+3]=255;if(delta>12)bad++;}
      const canvas=document.createElement('canvas');canvas.width=w;canvas.height=height;canvas.getContext('2d').putImageData(new ImageData(rgb,w,height),0,0);
-     buffer.unmap();buffer.destroy();resolve({w,height,draws:commands.filter(c=>c[0]==='beginDraw').length,mean:total/(w*height*3),badFraction:bad/(w*height),max,errors:[...g.errors,...h.errors],glPng:png,gpuPng:canvas.toDataURL()});
+     buffer.unmap();buffer.destroy();resolve({w,height,draws:commands.filter(c=>c[0]==='beginDraw').length,mean:total/(w*height*3),badFraction:bad/(w*height),max,errors:[...g.errors,...h.errors],programs:[...h.programs.keys()],glPng:png,gpuPng:canvas.toDataURL()});
     },reject);
    }catch(e){present.call(g);reject(e)}
   }
