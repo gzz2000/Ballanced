@@ -124,14 +124,29 @@ async function persist(){
 // ResizeObserver covers header wrapping/layout changes; window/media events also
 // catch browser zoom and movement between displays with a different pixel ratio.
 let resizeFrame=0,lastSize='';
+const screenModeKey='ballance.screenMode';
+try{if(localStorage.getItem(screenModeKey)==='fill')$('screen-mode').value='fill'}catch{}
+$('screen-mode').onchange=()=>{
+    try{localStorage.setItem(screenModeKey,$('screen-mode').value)}catch{}
+    scheduleResize();
+};
 function resizeGame(){
     resizeFrame=0;if(!running)return;
-    const stage=$('stage'),width=Math.floor(stage.clientWidth),height=Math.floor(stage.clientHeight);
+    const stage=$('stage');
+    let width=Math.floor(stage.clientWidth),height=Math.floor(stage.clientHeight);
+    if($('screen-mode').value!=='fill'){
+        const unit=Math.floor(Math.min(width/4,height/3));
+        width=unit*4;height=unit*3;
+    }
     if(width<=0||height<=0)return;
     const key=width+':'+height+':'+devicePixelRatio;
     const canvas=$('canvas');
-    if((key!==lastSize||canvas.clientWidth!==width||canvas.clientHeight!==height) &&
-        player._BallanceWebResize(width,height))lastSize=key;
+    if(key!==lastSize||canvas.clientWidth!==width||canvas.clientHeight!==height){
+        // SDL's browser size query reads the CSS rectangle. A level script can
+        // reset it to 640x480 even when SDL's cached window size is unchanged.
+        canvas.style.width=width+'px';canvas.style.height=height+'px';
+        if(player._BallanceWebResize(width,height))lastSize=key;
+    }
 }
 function scheduleResize(){if(!resizeFrame)resizeFrame=requestAnimationFrame(resizeGame)}
 const layoutObserver=new ResizeObserver(()=>{
@@ -193,6 +208,10 @@ async function startGame(){
         status('正在启动游戏…');$('loading-status').textContent='正在启动游戏…';
         const manifest=await(await fetch('./assets.json')).json();
         gpu=await createBallanceRenderer($('canvas'),{backend:selectedRenderer});
+        // Multiple script/host resizes can cancel out within one layout pass,
+        // so ResizeObserver alone can miss a reset to the authored 640x480.
+        const resizeRenderer=gpu.resize.bind(gpu);
+        gpu.resize=(...args)=>{const result=resizeRenderer(...args);scheduleResize();return result;};
         $('solver-status').title='渲染器：'+(gpu.backend==='webgl2'?'WebGL2':'WebGPU');
         $('renderer-status').textContent='当前渲染器：'+(gpu.backend==='webgl2'?'WebGL2':'WebGPU');
         const {default:createPlayer}=await import('./PlayerBrowser.mjs');

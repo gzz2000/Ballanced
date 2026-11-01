@@ -6,6 +6,7 @@ const browser=await chromium.launch({executablePath:'/Applications/Google Chrome
 const result={passed:false,layouts:[]};
 try{
  const page=await browser.newPage({viewport:{width:1024,height:828},deviceScaleFactor:1});
+ await page.addInitScript(()=>localStorage.setItem('ballance.screenMode','fill'));
  await page.goto(url);await page.waitForFunction(()=>window.ballance?.gpu.frames>30,null,{timeout:0});
  const advance=async n=>{const t=await page.evaluate(n=>ballance.gpu.frames+n,n);await page.waitForFunction(t=>ballance.gpu.frames>=t,t,{timeout:0})};
  const key=async k=>{await page.keyboard.down(k);await advance(6);await page.keyboard.up(k);await advance(20)};

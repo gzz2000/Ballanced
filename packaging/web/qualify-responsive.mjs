@@ -23,6 +23,7 @@ try{
  });
  page.on('pageerror',e=>console.error(e));
 
+ await page.addInitScript(()=>localStorage.setItem('ballance.screenMode','fill'));
  await page.goto('http://127.0.0.1:'+server.address().port+(process.env.BALLANCE_TEST_WEBGL==='1'?'/?renderer=auto':''));
  await page.waitForFunction(()=>window.ballance?.gpu.frames>30,{},{timeout:0});
  const advance=async n=>{const t=await page.evaluate(n=>ballance.gpu.frames+n,n);await page.waitForFunction(t=>ballance.gpu.frames>=t,t,{timeout:0})};
@@ -65,7 +66,9 @@ try{
  // Mouse hover and click Start in resized canvas coordinates, then keyboard.
  const box=await page.locator('canvas').boundingBox();await page.mouse.move(box.x+5,box.y+5);await advance(3);
  await page.mouse.move(box.x+box.width*.5,box.y+box.height*.20,{steps:6});await advance(6);await page.mouse.down();await advance(6);await page.mouse.up();await advance(30);
- await key('Enter');await advance(180);await key('q');await advance(180);await key('Escape');
+ await key('Enter');await advance(180);await key('q');
+ await page.waitForFunction(()=>ballance.player.FS.readFile('/user/ModLoader/ModLoader.log',{encoding:'utf8'}).includes('On Message BallNavActive'),null,{timeout:30000});
+ await advance(120);await key('Escape');
  await page.evaluate(()=>{
   const g=ballance.gpu,original=g.uniform.bind(g);window.projectionDraws=[];window.projectionFrame=-1;
   g.uniform=(group,binding,bytes)=>{
@@ -96,12 +99,14 @@ try{
  if(!before.length||!after.length)throw new Error('No 3D matrices captured');
  // Level 1's sky callback deliberately interpolates FOV toward PI. Test the
  // modal projection of actual level geometry, not that separate sky effect.
- const geometryProjection=(draws,minDraws=20)=>{
+ // Tight frustum culling can leave only 15 level draws at the start platform.
+ // Require a stable majority, not the old loose-frustum draw count.
+ const geometryProjection=(draws,minDraws=5)=>{
   const groups=new Map();for(const values of draws){let p;try{p=projection(values)}catch{continue}
    const key=p[0][0].toFixed(3)+':'+p[1][1].toFixed(3),group=groups.get(key)??{matrix:p,count:0};++group.count;groups.set(key,group);
   }
   const modal=[...groups.values()].sort((a,b)=>b.count-a.count)[0];
-  if(!modal||modal.count<minDraws||modal.count<=draws.length/2)throw new Error('No dominant level geometry projection');return modal;
+  if(!modal||modal.count<minDraws||modal.count<=draws.length/2)throw new Error('No dominant level geometry projection: '+JSON.stringify({draws:draws.length,groups:[...groups.entries()].map(([key,value])=>({key,count:value.count}))}));return modal;
  };
  const first=geometryProjection(before),second=geometryProjection(after),a=first.matrix,b=second.matrix;
  result.projection={before:a,after:b,geometryDraws:[first.count,second.count]};

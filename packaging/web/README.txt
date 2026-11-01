@@ -201,7 +201,9 @@ Responsive browser viewport
 ---------------------------
 The canvas now follows the available browser layout automatically, including
 wrapped toolbars and pixel-density changes. Resize does not focus the canvas
-while typing in forms. Presentation uses the full viewport and derives horizontal
+while typing in forms. Default presentation fits a centered4:3 canvas with black
+bars. Settings > Display > Screen area opts into filling the viewport and remembers
+the choice in localStorage (ballance.screenMode). Fill derives horizontal
 FOV from each authored camera: wider screens preserve vertical FOV, narrower
 screens preserve horizontal FOV and reveal more vertically. Menus/HUD use a
 centered 4:3 rectangle shared by drawing and picking; camera objects and physics
@@ -227,7 +229,7 @@ space reservation, Esc closing, narrow-screen overlay, DPR changes and no idle
 resize loop. This host-only iteration did not rerun the full TAS corpus.
 
 Status stays in the toolbar; initial download progress is centered over the game
-viewport until startup completes. The canvas fills
+viewport until startup completes. Fit leaves only aspect-ratio black bars; fill uses
 all remaining viewport space without outer padding; the right tools sidebar
 retains its desktop split/narrow overlay behavior. serve.py defaults to loopback
 port18766; retain that origin when updating so IndexedDB data stays accessible.
@@ -443,3 +445,15 @@ Local Chrome156: all12 variant combinations link, real menu/level same-frame
 WebGPU comparison and HS01 full strict TAS pass; offline caching also checked.
 Run BALLANCE_TEST_BORDER=1 with qualify-backends.mjs to force per-tap border
 sampling on captured frames and compare the retained full path against WebGPU.
+
+4:3 / rate-change regression (2026-11-01):
+  node packaging/web/qualify-screen-mode.mjs URL RESULTS
+  node packaging/web/qualify-rate-restore.mjs URL RESULTS
+The first checks fit/fill layouts, persistence, pointer navigation, level-load and
+render-only640x480 resets. Host CSS is applied before SDL size queries; renderer
+resize notifications cover resets coalesced away by ResizeObserver, without idle
+polling. Existing responsive/HUD/TAS-hit checks explicitly opt into fill.
+The second changes BML SetMaxFrameRate through actual UI widgets132->264 and
+checks9 capture/restore actions before and after those changes. These cases and
+scoped ordinary Level13 checks have not reproduced the user's typed-reference
+restore error. Failure logging is more detailed; that issue is NOT marked fixed.

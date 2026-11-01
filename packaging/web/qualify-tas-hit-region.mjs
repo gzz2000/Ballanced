@@ -20,13 +20,14 @@ try {
    await page.mouse.down();await advance(5);await page.mouse.up();await advance(20);
   };
   try {
+   await page.addInitScript(()=>localStorage.setItem('ballance.screenMode','fill'));
    await page.goto(url);
    await page.waitForFunction(() => window.ballance?.gpu.frames > 30, null, {timeout:120000});
    await page.focus('#canvas');await page.keyboard.down('Enter');await advance(6);await page.keyboard.up('Enter');await advance(20);
    const size = await page.evaluate(() => ({w:ballance.gpu.logicalWidth,h:ballance.gpu.logicalHeight}));
    // The old full-window location must no longer activate the entry.
    await click(size.w*.645,size.h*.8977);
-   if (await opened()) throw Error('Old full-window hit region is still active');
+   if (await opened()) throw Error('Old full-window hit region is still active: '+JSON.stringify(size));
    const uiw = Math.min(size.w,size.h*4/3), uih = uiw*3/4;
    await click((size.w-uiw)/2+uiw*.645,(size.h-uih)/2+uih*.8977);
    if (!await opened()) throw Error('Visible TAS entry did not open its project menu');
