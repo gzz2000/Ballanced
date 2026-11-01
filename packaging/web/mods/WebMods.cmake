@@ -63,7 +63,9 @@ add_custom_target(WebABIHeaders
         --output "${CMAKE_BINARY_DIR}/web-sdk" VERBATIM)
 add_dependencies(PlayerBrowser WebABIHeaders)
 set(_web_exports "${CMAKE_BINARY_DIR}/web-mods/host-exports.rsp")
+set(_web_js_services "${CMAKE_BINARY_DIR}/web-mods/host-exports.js.json")
 add_custom_command(OUTPUT "${_web_exports}"
+    BYPRODUCTS "${_web_js_services}"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_LIST_DIR}/host-exports.py"
         --nm "${CMAKE_NM}" --node "${CMAKE_CROSSCOMPILING_EMULATOR}"
         --build "${CMAKE_BINARY_DIR}" --output "${_web_exports}"
@@ -72,7 +74,8 @@ add_custom_command(OUTPUT "${_web_exports}"
         "${CMAKE_CURRENT_LIST_DIR}/abi_contract.py" "${CMAKE_CURRENT_LIST_DIR}/abi/v1.json" VERBATIM)
 add_custom_target(WebHostExports DEPENDS "${_web_exports}")
 add_dependencies(PlayerBrowser WebHostExports)
-target_link_options(PlayerBrowser PRIVATE "@${_web_exports}")
+target_link_options(PlayerBrowser PRIVATE "@${_web_exports}"
+    "-sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE=@${_web_js_services}")
 set_property(TARGET PlayerBrowser APPEND PROPERTY LINK_DEPENDS "${_web_exports}")
 
 add_custom_command(TARGET PlayerBrowser POST_BUILD

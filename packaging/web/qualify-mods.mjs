@@ -9,6 +9,9 @@ try{
  const ready=()=>page.waitForFunction(()=>window.ballance?.gpu.frames>30,null,{timeout:120000});
  await page.goto(url);await ready();
  result.defaults=await page.evaluate(()=>ballance.player.webMods.map(x=>({id:x.id,source:x.source})));
+ result.jsServices=await page.evaluate(()=>{
+  const m=ballance.player,result={};for(const name of ['emscripten_get_now','random_get','__syscall_uname']){const ptr=m.ccall('BallanceWebModSymbol','number',['string'],[name]);if(!ptr)throw Error('Missing retained JS service '+name);result[name]=true;if(name==='emscripten_get_now'&&!Number.isFinite(m.bwModFunction(ptr)()))throw Error('Invalid JS service signature')};return result;
+ });
  if(result.defaults.length!==3||result.defaults.some(x=>x.source!=='default'))throw Error('Default mod set incorrect');
  // Validate parser failures without installing/executing any malformed module.
  result.rejections=await page.evaluate(async bytes=>{

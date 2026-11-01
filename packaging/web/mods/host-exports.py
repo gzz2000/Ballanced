@@ -19,3 +19,6 @@ names|={name for name,entry in contract()['exports'].items() if entry['kind'] in
 names|=imports # --export-if-defined also retains libc/libc++ services used only by side modules
 a.output.write_text('\n'.join('-Wl,--export-if-defined='+s for s in sorted(names))+'\n')
 print(len(names),'host SDK/service exports')
+
+# JS-backed C services also need explicit roots; WASM exports alone do not keep them.
+a.output.with_suffix('.js.json').write_text(json.dumps(contract()['jsServices'])+'\n')

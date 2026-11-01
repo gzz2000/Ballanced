@@ -71,6 +71,8 @@ PIC,ffp-contract=off. `abi/v1.json` records the original public headers, toolcha
 and linked exports. SDK generation rejects unreviewed header/toolchain changes;
 linking retains original symbols even if current default mods stop using them;
 post-link and packaging checks reject removed/changed WASM export signatures.
+JS-backed C services have their own retained roots; preserving WASM exports alone
+would not keep those services through JavaScript dead-code elimination.
 Header checks are deliberately conservative, including comments: a harmless edit
 requires maintainer review, not a new ABI or forced third-party recompilation.
 
