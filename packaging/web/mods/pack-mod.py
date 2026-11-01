@@ -41,6 +41,7 @@ def pack(sdk,mod_id,version,module,create,destroy,requires=(),resources=()):
         'sdk':sdk['id'],'entry':'module.wasm','create':create,'destroy':destroy,'requires':[{'id':r.split('@',1)[0],'version':r.split('@',1)[1] if '@' in r else None} for r in requires],
         'webExports':[s for s in symbols if s.startswith('BML_Web')],
         'files':[{'path':p,'size':len(d),'sha256':hashlib.sha256(d).hexdigest()} for p,d in files.items()]}
+    if 'abi' in sdk:manifest['abi']={'id':sdk['abi']['id'],'minRevision':sdk['abi']['revision']}
     meta=json.dumps(manifest,ensure_ascii=False,separators=(',',':')).encode()
     return gzip.compress(MAGIC+struct.pack('<I',len(meta))+meta+b''.join(files.values()),mtime=0),manifest
 

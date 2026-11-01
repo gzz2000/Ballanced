@@ -1,0 +1,13 @@
+{
+  "release": "20261101.12",
+  "source": "866d953fd6079f84d580e3a64af49584ed938c70",
+  "sdk": "bw1-6b30dfe53997de66cc0e56ff",
+  "files": {
+    "WebHello.bwmod": "52fb26c51e48c69f0f398180de4769fff857fcf6d2b681a80ef5016f49ea4960",
+    "mods/BallanceTAS.bwmod": "ff39c2d319a193300b780cfc26b46ac8b608c227d2b815ca73c9abf73c451772",
+    "mods/LegacyTASRuntime.bwmod": "c1142a239bee49453ca9a101478f3873ff1d53e6b862505af97044ee0973adbc",
+    "mods/PracticeTools.bwmod": "ac783116b00171f2eea2581f9da26c2203505a59d9496404179264e1ff8c6ba0",
+    "mods.json": "d88f4bab08fc3e1d2dd709cb85b7e0c4d892aa769fdb6b1f29219a3c0917a68a"
+  },
+  "rule": "Frozen original binaries. Never rebuild these using a newer SDK."
+}

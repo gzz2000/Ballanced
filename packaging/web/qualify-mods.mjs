@@ -15,8 +15,8 @@ try{
   const {unpackMod,validateModSet}=await import('./mods.mjs'),sdk=ballance.player.webModCatalog.sdk;
   const raw=new Uint8Array(await new Response(new Blob([new Uint8Array(bytes)]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
   const n=new DataView(raw.buffer).getUint32(8,true),base=JSON.parse(new TextDecoder().decode(raw.slice(12,12+n))),payload=raw.slice(12+n),results=[];
-  for(const kind of ['sdk','path','hash','truncated','duplicate']){
-   const m=structuredClone(base);if(kind==='sdk')m.sdk='wrong-sdk';if(kind==='path')m.files[0].path='../escape.wasm';if(kind==='hash')m.files[0].sha256='0'.repeat(64);if(kind==='duplicate')m.files.push(m.files[0]);
+  for(const kind of ['sdk','abi-major','abi-revision','path','hash','truncated','duplicate']){
+   const m=structuredClone(base);if(kind==='sdk'){delete m.abi;m.sdk='wrong-sdk'}if(kind==='abi-major')m.abi={id:'incompatible-major',minRevision:0};if(kind==='abi-revision')m.abi={id:sdk.abi.id,minRevision:sdk.abi.revision+1};if(kind==='path')m.files[0].path='../escape.wasm';if(kind==='hash')m.files[0].sha256='0'.repeat(64);if(kind==='duplicate')m.files.push(m.files[0]);
    const meta=new TextEncoder().encode(JSON.stringify(m)),data=new Uint8Array(12+meta.length+payload.length-(kind==='truncated'?1:0));data.set(raw.slice(0,8));new DataView(data.buffer).setUint32(8,meta.length,true);data.set(meta,12);data.set(payload.subarray(0,data.length-12-meta.length),12+meta.length);
    const zipped=new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
    try{await unpackMod(zipped,sdk);throw Error('ACCEPTED '+kind)}catch(e){if(e.message.startsWith('ACCEPTED'))throw e;results.push({kind,error:e.message})}
@@ -24,6 +24,11 @@ try{
   for(const dep of [{id:'MissingMod',version:null},{id:'BallanceTAS',version:'incompatible'}]){
    const manifest={...base,requires:[dep]};try{validateModSet([...ballance.player.webMods.map(manifest=>({manifest})),{manifest}]);throw Error('ACCEPTED dependency')}catch(e){if(e.message.startsWith('ACCEPTED'))throw e;results.push({kind:'dependency',error:e.message})}
   }
+  const provenance={...base,sdk:'a-different-build-fingerprint',abi:{id:sdk.abi.id,minRevision:0}};
+  const metadata=new TextEncoder().encode(JSON.stringify(provenance)),data=new Uint8Array(12+metadata.length+payload.length);
+  data.set(raw.slice(0,8));new DataView(data.buffer).setUint32(8,metadata.length,true);data.set(metadata,12);data.set(payload,12+metadata.length);
+  const zipped=new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+  await unpackMod(zipped,sdk);results.push({kind:'compatible-abi-different-sdk',accepted:true});
   return results;
  },[...await readFile(packagePath)]);
  await page.locator('#toggle-sidebar').click();await page.locator('#tab-data').click();await page.locator('#import-mods').setInputFiles(packagePath);

@@ -1,0 +1,20 @@
+// Generated at configure time from src/Version.h.in, so do not edit the copy in
+// include/BML. These are the stable SDK release numbers a Mod is compiled against.
+// DECLARE_BML_VERSION reports them, and the loader uses them for compatibility.
+// To find the version of the running loader, call BML_GetVersion from BML.h.
+#ifndef BML_VERSION_H
+#define BML_VERSION_H
+
+#define BML_MAJOR_VERSION 0
+#define BML_MINOR_VERSION 3
+#define BML_PATCH_VERSION 14
+#define BML_VERSION "0.3.14"
+
+// Kept for source compatibility with SDK releases that exposed build metadata
+// through this header. Installed headers describe a release, not one particular
+// loader binary; inspect BMLPlus.dll's version resource for its build identity.
+#define BML_VERSION_GIT_HASH "unknown"
+#define BML_VERSION_GIT_DIRTY 0
+#define BML_VERSION_FULL BML_VERSION
+
+#endif // BML_VERSION_H

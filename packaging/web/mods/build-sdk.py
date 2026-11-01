@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Export the exact public headers and compilation contract of this browser host."""
 import argparse,pathlib,hashlib,json,shutil
+from abi_contract import check_headers
 p=argparse.ArgumentParser(description=__doc__);p.add_argument('--engine',type=pathlib.Path,required=True);p.add_argument('--bml',type=pathlib.Path,required=True);p.add_argument('--output',type=pathlib.Path,required=True);a=p.parse_args()
 out=a.output;out.mkdir(parents=True,exist_ok=True);inc=out/'include'
 if inc.exists():shutil.rmtree(inc)
@@ -18,11 +19,16 @@ for file in sorted(inc.rglob('*')):
     if file.is_file():h.update(str(file.relative_to(inc)).encode()+b'\0'+file.read_bytes())
 for name in ('WebModHost.cpp','WebMods.cmake','host-exports.py','web-mod-link.js','BallanceWebMod.cmake'):
     h.update(name.encode()+b'\0'+(pathlib.Path(__file__).parent/name).read_bytes())
+abi=check_headers(inc,contract)
+contract['abi']={'id':abi['id'],'revision':abi['revision']}
+contract['legacySdks']=abi['legacySdks']
+h.update(json.dumps(contract['abi'],sort_keys=True).encode())
 contract['id']='bw1-'+h.hexdigest()[:24]
 (out/'sdk.json').write_text(json.dumps(contract,indent=2)+'\n')
 for name in ('pack-mod.py','BallanceWebMod.cmake','FORMAT.md'):
     shutil.copy2(pathlib.Path(__file__).parent/name,out/name)
 shutil.copytree(pathlib.Path(__file__).parent/'example',out/'example',dirs_exist_ok=True)
+shutil.copy2(pathlib.Path(__file__).parent/'SDK-README.md',out/'README.md')
 licenses=out/'licenses';licenses.mkdir(exist_ok=True)
 for name,source in [('Ballanced',a.engine.parent/'LICENSE'),('CK2',a.engine/'CK2/LICENSE'),('VxMath',a.engine/'VxMath/LICENSE'),('BML',a.bml/'LICENSE'),('ImGui',a.bml/'deps/imgui/LICENSE.txt')]:
     shutil.copy2(source,licenses/(name+'.txt'))

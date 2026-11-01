@@ -1,0 +1,22 @@
+{
+  "formatVersion": 1,
+  "arch": "wasm32",
+  "emscripten": "6.0.13",
+  "cxx": 20,
+  "exceptions": "emscripten",
+  "threads": false,
+  "flags": [
+    "-fPIC",
+    "-ffp-contract=off",
+    "-fexceptions"
+  ],
+  "bml": "0.3.14",
+  "abi": {
+    "id": "ballanceweb-cxx-wasm32-v1",
+    "revision": 0
+  },
+  "legacySdks": [
+    "bw1-6b30dfe53997de66cc0e56ff"
+  ],
+  "id": "bw1-58148d2321080329aae793d0"
+}

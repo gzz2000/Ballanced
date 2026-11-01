@@ -1,0 +1,35 @@
+{
+  "formatVersion": 1,
+  "sdk": {
+    "formatVersion": 1,
+    "arch": "wasm32",
+    "emscripten": "6.0.13",
+    "cxx": 20,
+    "exceptions": "emscripten",
+    "threads": false,
+    "flags": [
+      "-fPIC",
+      "-ffp-contract=off",
+      "-fexceptions"
+    ],
+    "bml": "0.3.14",
+    "id": "bw1-6b30dfe53997de66cc0e56ff"
+  },
+  "mods": [
+    {
+      "id": "BallanceTAS",
+      "url": "mods/BallanceTAS.bwmod",
+      "sha256": "ff39c2d319a193300b780cfc26b46ac8b608c227d2b815ca73c9abf73c451772"
+    },
+    {
+      "id": "LegacyTASRuntime",
+      "url": "mods/LegacyTASRuntime.bwmod",
+      "sha256": "c1142a239bee49453ca9a101478f3873ff1d53e6b862505af97044ee0973adbc"
+    },
+    {
+      "id": "PracticeTools",
+      "url": "mods/PracticeTools.bwmod",
+      "sha256": "ac783116b00171f2eea2581f9da26c2203505a59d9496404179264e1ff8c6ba0"
+    }
+  ]
+}

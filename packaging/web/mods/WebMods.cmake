@@ -47,14 +47,34 @@ target_link_options(PlayerBrowser PRIVATE "-sMAIN_MODULE=2"
     "-sEXPORTED_RUNTIME_METHODS=['FS','IDBFS','ENV','callMain','ccall','requestFullscreen','loadDynamicLibrary','bwModFunction','bwFinalizeMods']")
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
+# The ABI uses the published Emscripten calling convention and public layouts.
+execute_process(COMMAND "${CMAKE_CXX_COMPILER}" -dumpversion
+    OUTPUT_VARIABLE _web_emver OUTPUT_STRIP_TRAILING_WHITESPACE)
+if(NOT _web_emver STREQUAL "6.0.13")
+    message(FATAL_ERROR "BallanceWeb ABI v1 requires Emscripten 6.0.13")
+endif()
+set(_web_abi_flags "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${CMAKE_CXX_FLAGS_MINSIZEREL}")
+if(_web_abi_flags MATCHES "-fpack-struct|-fshort-enums|-fshort-wchar|-fno-rtti|-fno-exceptions|-fwasm-exceptions|-pthread|-m64")
+    message(FATAL_ERROR "Compiler flags would change the published BallanceWeb ABI")
+endif()
+add_custom_target(WebABIHeaders
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_LIST_DIR}/build-sdk.py"
+        --engine "${CMAKE_SOURCE_DIR}/Source" --bml "${BALLANCE_BML_SOURCE_DIR}"
+        --output "${CMAKE_BINARY_DIR}/web-sdk" VERBATIM)
+add_dependencies(PlayerBrowser WebABIHeaders)
 set(_web_exports "${CMAKE_BINARY_DIR}/web-mods/host-exports.rsp")
 add_custom_command(OUTPUT "${_web_exports}"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_LIST_DIR}/host-exports.py"
         --nm "${CMAKE_NM}" --node "${CMAKE_CROSSCOMPILING_EMULATOR}"
         --build "${CMAKE_BINARY_DIR}" --output "${_web_exports}"
     DEPENDS BallanceTASWeb LegacyTASRuntimeWeb PracticeToolsWeb ${_ballance_static_module_targets}
-        BML CK2Static VxMathStatic "${CMAKE_CURRENT_LIST_DIR}/host-exports.py" VERBATIM)
+        BML CK2Static VxMathStatic "${CMAKE_CURRENT_LIST_DIR}/host-exports.py"
+        "${CMAKE_CURRENT_LIST_DIR}/abi_contract.py" "${CMAKE_CURRENT_LIST_DIR}/abi/v1.json" VERBATIM)
 add_custom_target(WebHostExports DEPENDS "${_web_exports}")
 add_dependencies(PlayerBrowser WebHostExports)
 target_link_options(PlayerBrowser PRIVATE "@${_web_exports}")
 set_property(TARGET PlayerBrowser APPEND PROPERTY LINK_DEPENDS "${_web_exports}")
+
+add_custom_command(TARGET PlayerBrowser POST_BUILD
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_LIST_DIR}/abi_contract.py"
+        --wasm "$<TARGET_FILE_DIR:PlayerBrowser>/PlayerBrowser.wasm" VERBATIM)

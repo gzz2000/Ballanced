@@ -23,6 +23,7 @@ for name in ('webgpu.mjs','webgl2.mjs','renderer.mjs'):
 mod_build=(a.mod_build or a.player.resolve().parents[3])
 sdk_dir=mod_build/'web-sdk'
 subprocess.run([sys.executable,str(here/'mods/build-sdk.py'),'--engine',str(here.parents[1]/'Source'),'--bml',str(a.bml_source),'--output',str(sdk_dir)],check=True)
+subprocess.run([sys.executable,str(here/'mods/abi_contract.py'),'--wasm',str(a.player.with_suffix('.wasm'))],check=True)
 sdk=json.loads((sdk_dir/'sdk.json').read_text())
 spec=importlib.util.spec_from_file_location('pack_mod',here/'mods/pack-mod.py');packer=importlib.util.module_from_spec(spec);spec.loader.exec_module(packer)
 mods=[]

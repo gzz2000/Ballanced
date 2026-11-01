@@ -508,3 +508,33 @@ Dynamic-host qualification: HS01 completes with no falls, also with two captures
 and four restores. Rate-change checks cover 132→264 and repeated/overwritten
 checkpoints. This does not requalify the paused custom-map corpus or arbitrary
 third-party private state for full-world snapshots.
+
+Ready-to-use SDK and skill source
+--------------------------------
+Both are committed on https://github.com/gzz2000/Ballanced/tree/web-port:
+  sdk/wasm                      standalone headers/helper/example/licenses
+  skills/ballance-wasm-mod       reusable source-porting skill
+A sparse clone of these two paths is enough to compile mods. See sdk/wasm/README.md
+for exact clone/build commands and compatibility policy. No engine compilation
+or proprietary game assets are needed to build the example.
+
+ABI v1 release policy (2026-11-01.13)
+-----------------------------------
+SDK fingerprints record build provenance; ABI id + minimum revision govern new
+package compatibility. Current ABI is ballanceweb-cxx-wasm32-v1 revision0. The
+original SDK bw1-6b30dfe53997de66cc0e56ff is explicitly supported without rebuilding.
+Build/packaging guards preserve public layout headers, Emscripten conventions and
+13,956 published WASM export names/signatures; previous host services remain
+retained even when new default plugins stop importing them. See mods/FORMAT.md.
+
+Required browser release regression (original public HS01 reference supplied
+locally, not redistributed here):
+  node packaging/web/qualify-abi.mjs URL OUTPUT /path/to/HS01_reference.tas \
+    /path/to/new-sdk-example/WebHello.bwmod
+This runs frozen old WebHello, newly built WebHello and frozen old default mods
+on the new host in separate profiles. Old TAS must finish HS01 without falls
+after two captures/four restores. It also checks offline reload/unload and rejects
+unsupported ABI majors/revisions while accepting a different SDK fingerprint.
+Never rebuild the old fixtures with the current SDK. They intentionally retain
+the previous binary layout/calling convention. A passing HS01 is not proof of
+all third-party gameplay behaviors or the paused custom-map corpus.

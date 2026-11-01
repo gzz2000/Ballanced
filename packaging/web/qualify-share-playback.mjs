@@ -1,5 +1,6 @@
 // Complete the user's shared examples with unchanged strict simulation, batching
 // 64 samples per render only in the disposable test host.
+import {installLegacyModFixtures} from './qualify-abi-fixtures.mjs';
 import {chromium} from 'playwright';import {mkdir,writeFile,readFile} from 'node:fs/promises';
 const [url,out,only]=process.argv.slice(2);await mkdir(out,{recursive:true});
 const base='https://github.com/misiroqwq/ballance_misc/raw/refs/heads/main/TAS_Resources/TAS文件合集/';
@@ -8,6 +9,7 @@ const cases={builtin:{action:'tas',level:'1',record:base+'原版关常规/HS01_4
 const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});const results=[];
 try{await Promise.all(Object.entries(cases).filter(([kind])=>!only||kind===only).map(async([kind,params])=>{
  const result={kind,passed:false};results.push(result);const context=await browser.newContext({serviceWorkers:'block',viewport:{width:960,height:780}}),page=await context.newPage();
+ if(process.env.BALLANCE_TEST_DEFAULT_MODS){await installLegacyModFixtures(context,process.env.BALLANCE_TEST_DEFAULT_MODS);result.legacyDefaultMods=true}
  if(process.env.BALLANCE_TEST_TAPE&&kind==='builtin')await context.route('https://raw.githubusercontent.com/**',async route=>{await route.fulfill({status:200,contentType:'application/octet-stream',headers:{'Access-Control-Allow-Origin':'*'},body:await readFile(process.env.BALLANCE_TEST_TAPE)})});
  if(process.env.BALLANCE_TEST_REALTIME!=='1')await context.route('**/app.mjs',async route=>{
   const response=await route.fetch();const env={BALLANCE_FAST_FORWARD_BATCH:'64'};

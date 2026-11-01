@@ -19,6 +19,7 @@ Example manifest:
   "id": "WebHello",
   "version": "1.0.0",
   "sdk": "bw1-<exact SDK fingerprint>",
+  "abi": {"id": "ballanceweb-cxx-wasm32-v1", "minRevision": 0},
   "entry": "module.wasm",
   "create": "BW_WebHello_Entry",
   "destroy": "BW_WebHello_Exit",
@@ -54,14 +55,37 @@ SHA256 detects corruption; it is not a signature or proof of authorship.
 
 # Compatibility and lifetime
 
-`sdk` is an exact fingerprint of distributed CK/BML/VxMath/ImGui headers and the
-compilation contract: Emscripten6.0.13,wasm32,C++20,Emscripten exceptions,no pthreads,
-PIC,ffp-contract=off. Use the SDK shipped with the target host; do not edit the
-fingerprint to suppress an incompatibility. Its build scripts also define the
-host's exported SDK/services; changes to this contract require a new fingerprint.
-A package can only use services available in that host. Adding a new OS/JS runtime
-API may require a host SDK revision; unsupported symbols fail startup explicitly.
-Windows PE and macOS Mach-O `.bmodp` files are not WASM packages.
+`sdk` records the SDK build fingerprint; it is not the compatibility version.
+New packages also declare `abi: {"id":"ballanceweb-cxx-wasm32-v1",
+"minRevision":0}`. A host accepts them when the ABI id matches and its revision
+is at least minRevision, regardless of SDK fingerprint. Older packages without
+`abi` are accepted only for the current SDK or an explicitly certified legacy
+SDK. The first release SDK `bw1-6b30dfe53997de66cc0e56ff` is certified for ABI v1;
+its original binaries are retained for regression tests. Unsupported ABI majors,
+future minimum revisions and unknown legacy SDKs fail before linking.
+
+ABI v1 compatibility is a maintained contract: preserve existing C++ layouts,
+vtable slots, calling conventions, and published host exports/signatures. The
+compiler contract is Emscripten6.0.13,wasm32,C++20,Emscripten exceptions,no pthreads,
+PIC,ffp-contract=off. `abi/v1.json` records the original public headers, toolchain
+and linked exports. SDK generation rejects unreviewed header/toolchain changes;
+linking retains original symbols even if current default mods stop using them;
+post-link and packaging checks reject removed/changed WASM export signatures.
+Header checks are deliberately conservative, including comments: a harmless edit
+requires maintainer review, not a new ABI or forced third-party recompilation.
+
+Compatible releases keep the ABI id. New optional services should use separate
+extension interfaces/opaque handles and increase revision; do not reorder fields
+or append virtual methods to existing interfaces. A genuine incompatible change
+requires a new ABI major or a compatibility adapter that preserves the old one.
+Do not relabel incompatible layouts with the same ABI id. Run the frozen old
+plugin binaries against new hosts; rebuilding tests with new headers would hide
+the compatibility failure. Binary compatibility does not certify every mod's
+behavior, arbitrary private hooks, or complete-world snapshot support.
+
+A package can only use services available in its declared ABI revision. Native
+Windows PE and macOS Mach-O `.bmodp` files are not WASM packages. Do not edit an
+incompatible package's manifest to bypass a version check.
 
 BML manager, core BML/NewBallType integrations and the engine remain in the host.
 BallanceTAS, LegacyTASRuntime and PracticeTools are dynamically loaded default

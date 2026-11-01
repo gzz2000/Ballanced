@@ -10,10 +10,50 @@ IMod is constructed. BML itself and core NewBallType support remain in the host.
 ## Obtain and build against the matching SDK
 
 Use the SDK distributed with the target BallanceWeb release, not a random BML
-header checkout. Read its sdk.json and the site's mods.json; IDs must match.
+header checkout. Read its sdk.json and the site's mods.json: ABI ids must match,
+and the host revision must meet the package minimum. SDK fingerprints may differ.
+An older host with no ABI support still requires its exact SDK.
 The initial contract is Emscripten6.0.13,wasm32,C++20,`-fPIC -fexceptions
 -ffp-contract=off`,no pthreads. Prefer an existing matching emsdk; do not replace
 the user's global compiler. Activate the requested SDK in the build shell.
+
+Fetch the ready-to-use SDK and skill from the project repository:
+
+```sh
+git clone --depth 1 --branch web-port --filter=blob:none --sparse \
+  https://github.com/gzz2000/Ballanced.git Ballanced
+git -C Ballanced sparse-checkout set sdk/wasm skills/ballance-wasm-mod
+```
+
+Use `Ballanced/sdk/wasm` as BALLANCE_WEB_SDK. This contains the exported headers,
+helper, packer, licenses and example; do not clone/build the full engine or BML
+just to compile a mod. Read its README.md for setup and regeneration details.
+The original SDK `bw1-6b30dfe53997de66cc0e56ff` (web release 20261101.12) is
+explicitly supported by ABI v1, including old binaries without an ABI field.
+`web-port` is not a fixed release. Compare the declared ABI/minimum revision
+rather than assuming the newest branch works with every older host.
+Record `git -C Ballanced rev-parse HEAD` along with sdk.json in test notes.
+
+If the required compiler is unavailable, the official toolchain repository is
+https://github.com/emscripten-core/emsdk.git. For the initial SDK, in a local
+checkout: `./emsdk install 6.0.13`, `./emsdk activate 6.0.13`, then source
+`emsdk_env.sh`. Use the version from the selected SDK for later revisions.
+Python 3, CMake 3.20+ and Ninja are also required. First build sdk/wasm/example
+with the same commands below, then adapt it to the user's source mod.
+
+ABI v1 (`ballanceweb-cxx-wasm32-v1`) preserves the existing CK/BML layouts,
+vtable slots, compiler conventions and exported host services. The packer copies
+the SDK ABI/revision into the package's minimum requirement. Compatible host
+updates accept older binaries even with a different SDK fingerprint. Future
+extensions should add separate/versioned services; do not modify old interfaces
+or bypass checks by editing manifest identifiers. Interface compatibility does
+not automatically cover private engine hooks or full-world snapshot behavior.
+
+For host/SDK work, `packaging/web/mods/abi/v1.json` is the preserved baseline.
+Header/toolchain and post-link signature guards run during builds. Retain old
+exports and run frozen binaries in `packaging/web/mods/abi/fixtures/` on the new
+host; never rebuild these fixtures with the current SDK. Ordinary mod porting
+should use the public SDK and should not alter the host ABI baseline.
 
 A standalone CMakeLists.txt can contain:
 

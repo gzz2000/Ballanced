@@ -12,7 +12,10 @@ export async function unpackMod(bytes,sdk){
  const metaLength=new DataView(data.buffer).getUint32(8,true);if(metaLength>1024*1024||12+metaLength>length)throw Error('插件清单长度无效');
  const m=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(data.subarray(12,12+metaLength)));
  if(m.format!=='ballanceweb-mod'||m.formatVersion!==1||typeof m.id!=='string'||!idPattern.test(m.id)||typeof m.version!=='string'||!m.version||m.version.length>80)throw Error('插件清单格式无效');
- if(m.sdk!==sdk.id)throw Error(`${m.id} 的 SDK 不兼容，需要 ${sdk.id}`);
+ if(typeof m.sdk!=='string')throw Error('插件缺少 SDK 构建标识');
+ if(m.abi!==undefined){
+  if(!m.abi||!sdk.abi||m.abi.id!==sdk.abi.id||!Number.isSafeInteger(m.abi.minRevision)||m.abi.minRevision<0||m.abi.minRevision>sdk.abi.revision)throw Error(`${m.id} 的 ABI 不兼容，需要升级宿主或插件`);
+ }else if(m.sdk!==sdk.id&&!sdk.legacySdks?.includes(m.sdk))throw Error(`${m.id} 的旧版 SDK 未获兼容认证：${m.sdk}`);
  if(typeof m.create!=='string'||typeof m.destroy!=='string'||!symbolPattern.test(m.create)||!symbolPattern.test(m.destroy)||m.create===m.destroy)throw Error('插件入口无效');
  if(!Array.isArray(m.requires)||m.requires.some(x=>!x||typeof x.id!=='string'||!idPattern.test(x.id)||(x.version!==null&&(typeof x.version!=='string'||!x.version||x.version.length>80))))throw Error('插件依赖无效');
  if(!Array.isArray(m.webExports)||m.webExports.some(x=>typeof x!=='string'||!symbolPattern.test(x)))throw Error('插件网页接口无效');
