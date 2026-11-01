@@ -1,0 +1,12 @@
+{
+  "upstream": "https://github.com/Xenapte/MyBMLMods",
+  "commit": "3718197500d2bc3e88cf20e5c27b377a4be6f22a",
+  "paths": [
+    "StaticCamera/main.cpp",
+    "StaticCamera/main.h"
+  ],
+  "version": "0.1.0",
+  "license": "MIT",
+  "reference_binary": "downloads/ballancemaps/Ballance\u81ea\u5236\u6a21\u7ec4(Mod)\u2460/BML\uff0b/StaticCamera.bmodp",
+  "reference_sha256": "0fb78dfd66a206214c95c8a977dc426028560b3a3621b82db00dc1d49d679566"
+}

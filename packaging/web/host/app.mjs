@@ -30,7 +30,7 @@ for(const type of ['keydown','keypress'])document.addEventListener(type,event=>{
     }
 });
 let modCatalog;
-let player,gpu,running=false,userReady=false,syncTail=Promise.resolve(),timer,restartNeedsSave=false;
+let player,gpu,running=false,userReady=false,syncTail=Promise.resolve(),timer,restartNeedsSave=false,runtimeFailure=null;
 const status=text=>{$('status').textContent=text};
 const storage=text=>{$('storage').textContent=text};
 const rendererKey='ballance.renderer',rendererChoices=['webgl2','webgpu','auto'];
@@ -246,7 +246,7 @@ async function startGame(){
         player=await createPlayer({canvas:$('canvas'),ballanceGpu:gpu,
             browserResolution:resolution,onResolutionChange:selectResolution,
             print:line=>console.log(line),printErr:line=>console.error(line),
-            onAbort:reason=>showRestart('游戏运行失败：'+reason),
+            onAbort:reason=>{runtimeFailure=String(reason);showRestart('游戏运行失败：'+reason)},
             onBallanceExit:async()=>{
                 running=false;clearInterval(timer);
                 try{await persist();showRestart('游戏已退出，数据已保存。')}
@@ -307,11 +307,12 @@ async function startGame(){
         player.webMods=loadedMods;player.webModCatalog=modCatalog;refreshMods();
         $('mods-status').textContent='已动态加载 '+loadedMods.length+' 个插件。';
         const code=player.callMain(['--root-path','/game','--cmo','/game/base.cmo','--user-data-path','/user','--rasterizer','webgpu']);
+        if(runtimeFailure)throw new Error(runtimeFailure);
         if(code)throw new Error('Player 初始化失败 '+code);
         running=true;resizeGame();gpu.setSamples(Number($('samples').value));
         for(const id of ['maps','tapes','save','refresh'])$(id).disabled=false;
         timer=setInterval(()=>{void persist().catch(()=>{})},10000);
-        await persist();status('');$('loading-screen').hidden=true;$('canvas').focus();
+        await persist();if(runtimeFailure)return;status('');$('loading-screen').hidden=true;$('canvas').focus();
         // Keep introspection available for local acceptance tests and diagnostics.
         window.ballance={player,gpu,get running(){return running},persist};
         updateRuntimeStatus();runtimeTimer=setInterval(updateRuntimeStatus,250);

@@ -1,0 +1,18 @@
+{
+  "repository": "https://github.com/Xenapte/MyBMLMods",
+  "commit": "3718197500d2bc3e88cf20e5c27b377a4be6f22a",
+  "source": "KeystrokeViewer/main.cpp",
+  "source_version": "0.1.0",
+  "downloaded_binary": "downloads/ballancemaps/Ballance自制模组(Mod)【HOT】/BML＋/KeystrokeViewer.bmodp",
+  "downloaded_binary_version": "0.1.0",
+  "downloaded_sha256": "6e44fe402b700b1c9ffad0aed6a91337a958df480caba90bdea2f82f27d8804f",
+  "note": "Original source0.1.0 matches downloaded version identity; not claiming byte-identical native build.",
+  "port_sdk": "bw1-52b52372ca2595105916cb86",
+  "abi": {
+    "id": "ballanceweb-cxx-wasm32-v1",
+    "minRevision": 1
+  },
+  "emscripten": "6.0.13",
+  "sdk_repository_commit": "f46be16b5f0ef0c16544a9172ce8e7596e3457bc",
+  "sdk_note": "Revision1 SDK regenerated in parent working tree; fingerprint identifies exact candidate."
+}

@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.20)
+project(FogMode LANGUAGES CXX)
+include("${BALLANCE_WEB_SDK}/BallanceWebMod.cmake")
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/prepare-source.py")
+set(_source_args)
+if(FOGMODE_UPSTREAM)
+  list(APPEND _source_args --source "${FOGMODE_UPSTREAM}")
+endif()
+execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/prepare-source.py"
+  --output "${CMAKE_CURRENT_BINARY_DIR}/upstream" ${_source_args} COMMAND_ERROR_IS_FATAL ANY)
+ballance_web_mod(FogMode ID FogMode VERSION 0.3.10-web.1 SOURCES "${CMAKE_CURRENT_BINARY_DIR}/upstream/FogMode.cpp")

@@ -1,0 +1,12 @@
+{
+  "upstream": "https://github.com/Ghomist/FogMode4Ballance",
+  "commit": "2de9635c2a7bc91ca610d8e9a43d658b0696dc22",
+  "source_sha256": {
+    "FogMode.h": "0d1bf15e4faeb12c5d80c118998617777f229bcee19cd16efd377ff74871f1e0",
+    "FogMode.cpp": "56c78052b01bfc09b99bfa9381963accfc4de8ba098824744aba5c116945bb45"
+  },
+  "license": "No license declared in upstream tree; source fetched into build directory, not vendored",
+  "reference_binary": "downloads/ballancemaps/Ballance\u81ea\u5236\u6a21\u7ec4(Mod)\u2460/BML\uff0b/FogMode.bmodp",
+  "reference_sha256": "16037363e55430251743f02432d833664ecbb9289f89c151a587d6c4256e3b1e",
+  "version_note": "Reference PE reports BML version0.3.10; upstream reports BML_VERSION, no independent mod semver. Source-level port, not claimed bit-identical to PE."
+}

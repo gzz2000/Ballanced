@@ -125,3 +125,38 @@ Use disposable browser/user profiles for destructive checks and distinct outputs
 for concurrent independent tests. Record concise procedures/results, not large
 runtime copies. Report a failed scenario as a failure; do not call a mod fully
 compatible because it loads once.
+
+## Lessons from the ys168 port batch
+
+See `mod-ports/README.md` in the full repository for reproducible source ports and
+feature-level tests. A sparse SDK checkout does not include those examples;
+`git sparse-checkout add mod-ports` retrieves them.
+
+- Identify the downloaded binary by SHA256 and the source by commit, version and
+  license. Source version identity does not prove a byte-identical native build.
+  If upstream publishes no license, retain a pinned fetch/patch recipe instead of
+  silently treating its source or binary as redistributable.
+- Older BML sources use `m_bml`, BMLAll includes and different const/callback types.
+  Use this SDK's `m_BML` and callback signatures. Resolve timer overloads explicitly
+  with CKDWORD; convert chrono durations explicitly rather than assuming `.count()`
+  is nanoseconds on every standard library.
+- Behavior names are exact asset strings, including trailing spaces. PhysicsEditor
+  encountered `Tutorial freeze/unfreeze `; verify the graph and all parameters
+  before writing. Follow `GetRealSource()` when inputs share parameter chains.
+- `GetTime()` is wall time; `GetAbsoluteTime()` is scaled simulation time. Exercise
+  pause, speed changes and accelerated TAS before making clock equivalence claims.
+- A compiled side module can retain unavailable direct-function imports. Revision1
+  adds 31 typed math exports, including `roundf`; the host preflights imports before
+  constructors. It does not promise every libc function. Test the real code path,
+  not just loading. Never edit a manifest to bypass an unavailable service.
+- `BGui::Label` uses game bitmap fonts; `BGui::Text` uses CKSpriteText/Vx fonts.
+  String getters alone did not reveal an empty font backend. Inspect real pixels,
+  line breaks, Unicode, clipping and repeated Save/Load font-size stability.
+- Private caches may disagree with restored engine objects. KeystrokeViewer now
+  compares against the actual sprite text instead of trusting its cached string;
+  PositionViewer resets its measurement window on clock rewind. These observation
+  fixes do not constitute general plugin-private snapshot support. StaticCamera's
+  private offset still cannot be rewound by the current snapshot system.
+- Audit existing APIs before adding services: CKWaveSound already has transport,
+  gain and position, but the current reader is WAV-only. MusicReplacer needs actual
+  MP3 decoding/import; ScreenCapturer needs async browser capture/encoding/clipboard.

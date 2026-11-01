@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.20)
+project(StaticCamera LANGUAGES CXX)
+include("${BALLANCE_WEB_SDK}/BallanceWebMod.cmake")
+ballance_web_mod(StaticCamera ID StaticCamera VERSION 0.1.0-web.1 SOURCES main.cpp)
+option(CAMERA_PORT_PROBE "Build separate observer/config test mod" OFF)
+if(CAMERA_PORT_PROBE)
+  ballance_web_mod(CameraPortProbe ID CameraPortProbe VERSION 0.1.0 SOURCES tests/CameraPortProbe.cpp)
+endif()

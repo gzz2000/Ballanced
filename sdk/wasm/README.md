@@ -69,6 +69,14 @@ A future incompatible layout/toolchain needs a new ABI major or an adapter; a
 normal website update must not silently invalidate existing v1 plugins. New
 optional APIs should extend separate interfaces and raise the revision.
 
+Revision 1 adds 31 C math exports (including `roundf`) without changing v1 public
+headers or existing signatures. Extension manifests live in `abi/v1-r*.json`;
+`v1.json` remains the immutable baseline. The host validates required imports
+before running side-module constructors and reports missing services by name.
+The revision-1 host also implements browser bitmap fonts used by BGui::Text,
+including explicit multiline text and stable font size across snapshot restores.
+It does not export every libc function or capture arbitrary plugin-private state.
+
 This protects supported interfaces; it does not make undefined behavior, private
 engine assumptions, or arbitrary plugin snapshot state automatically compatible.
 Do not rewrite manifest ABI fields to conceal an actual mismatch.

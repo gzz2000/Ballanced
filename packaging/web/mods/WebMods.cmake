@@ -44,7 +44,7 @@ set_property(TARGET PlayerBrowser PROPERTY COMPILE_DEFINITIONS "${_defs}")
 target_sources(PlayerBrowser PRIVATE "${CMAKE_CURRENT_LIST_DIR}/WebModHost.cpp")
 target_link_options(PlayerBrowser PRIVATE "-sMAIN_MODULE=2"
     "--js-library=${CMAKE_CURRENT_LIST_DIR}/web-mod-link.js"
-    "-sEXPORTED_RUNTIME_METHODS=['FS','IDBFS','ENV','callMain','ccall','requestFullscreen','loadDynamicLibrary','bwModFunction','bwFinalizeMods']")
+    "-sEXPORTED_RUNTIME_METHODS=['FS','IDBFS','ENV','callMain','ccall','requestFullscreen','loadDynamicLibrary','bwModFunction','bwFinalizeMods','bwHasModSymbol','bwModMetadata']")
 
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 # The ABI uses the published Emscripten calling convention and public layouts.
@@ -62,6 +62,7 @@ add_custom_target(WebABIHeaders
         --engine "${CMAKE_SOURCE_DIR}/Source" --bml "${BALLANCE_BML_SOURCE_DIR}"
         --output "${CMAKE_BINARY_DIR}/web-sdk" VERBATIM)
 add_dependencies(PlayerBrowser WebABIHeaders)
+file(GLOB _web_abi_contracts CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/abi/*.json")
 set(_web_exports "${CMAKE_BINARY_DIR}/web-mods/host-exports.rsp")
 set(_web_js_services "${CMAKE_BINARY_DIR}/web-mods/host-exports.js.json")
 add_custom_command(OUTPUT "${_web_exports}"
@@ -71,7 +72,7 @@ add_custom_command(OUTPUT "${_web_exports}"
         --build "${CMAKE_BINARY_DIR}" --output "${_web_exports}"
     DEPENDS BallanceTASWeb LegacyTASRuntimeWeb PracticeToolsWeb ${_ballance_static_module_targets}
         BML CK2Static VxMathStatic "${CMAKE_CURRENT_LIST_DIR}/host-exports.py"
-        "${CMAKE_CURRENT_LIST_DIR}/abi_contract.py" "${CMAKE_CURRENT_LIST_DIR}/abi/v1.json" VERBATIM)
+        "${CMAKE_CURRENT_LIST_DIR}/abi_contract.py" ${_web_abi_contracts} VERBATIM)
 add_custom_target(WebHostExports DEPENDS "${_web_exports}")
 add_dependencies(PlayerBrowser WebHostExports)
 target_link_options(PlayerBrowser PRIVATE "@${_web_exports}"

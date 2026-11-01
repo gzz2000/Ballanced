@@ -1,0 +1,296 @@
+{
+  "id": "ballanceweb-cxx-wasm32-v1",
+  "revision": 1,
+  "description": "Retained C math services required by independently compiled BML mods. Original v1 layouts and exports remain unchanged.",
+  "exports": {
+    "roundf": {
+      "kind": "function",
+      "params": [
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "trunc": {
+      "kind": "function",
+      "params": [
+        124
+      ],
+      "results": [
+        124
+      ]
+    },
+    "truncf": {
+      "kind": "function",
+      "params": [
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "ceil": {
+      "kind": "function",
+      "params": [
+        124
+      ],
+      "results": [
+        124
+      ]
+    },
+    "ceilf": {
+      "kind": "function",
+      "params": [
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "floor": {
+      "kind": "function",
+      "params": [
+        124
+      ],
+      "results": [
+        124
+      ]
+    },
+    "floorf": {
+      "kind": "function",
+      "params": [
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "tanf": {
+      "kind": "function",
+      "params": [
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "acosf": {
+      "kind": "function",
+      "params": [
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "atan": {
+      "kind": "function",
+      "params": [
+        124
+      ],
+      "results": [
+        124
+      ]
+    },
+    "atanf": {
+      "kind": "function",
+      "params": [
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "sqrt": {
+      "kind": "function",
+      "params": [
+        124
+      ],
+      "results": [
+        124
+      ]
+    },
+    "sqrtf": {
+      "kind": "function",
+      "params": [
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "expf": {
+      "kind": "function",
+      "params": [
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "logf": {
+      "kind": "function",
+      "params": [
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "log10f": {
+      "kind": "function",
+      "params": [
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "fabs": {
+      "kind": "function",
+      "params": [
+        124
+      ],
+      "results": [
+        124
+      ]
+    },
+    "fabsf": {
+      "kind": "function",
+      "params": [
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "powf": {
+      "kind": "function",
+      "params": [
+        125,
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "fmodf": {
+      "kind": "function",
+      "params": [
+        125,
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "hypot": {
+      "kind": "function",
+      "params": [
+        124,
+        124
+      ],
+      "results": [
+        124
+      ]
+    },
+    "hypotf": {
+      "kind": "function",
+      "params": [
+        125,
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "copysign": {
+      "kind": "function",
+      "params": [
+        124,
+        124
+      ],
+      "results": [
+        124
+      ]
+    },
+    "copysignf": {
+      "kind": "function",
+      "params": [
+        125,
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "fmin": {
+      "kind": "function",
+      "params": [
+        124,
+        124
+      ],
+      "results": [
+        124
+      ]
+    },
+    "fminf": {
+      "kind": "function",
+      "params": [
+        125,
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "fmax": {
+      "kind": "function",
+      "params": [
+        124,
+        124
+      ],
+      "results": [
+        124
+      ]
+    },
+    "fmaxf": {
+      "kind": "function",
+      "params": [
+        125,
+        125
+      ],
+      "results": [
+        125
+      ]
+    },
+    "lround": {
+      "kind": "function",
+      "params": [
+        124
+      ],
+      "results": [
+        127
+      ]
+    },
+    "lroundf": {
+      "kind": "function",
+      "params": [
+        125
+      ],
+      "results": [
+        127
+      ]
+    },
+    "llroundf": {
+      "kind": "function",
+      "params": [
+        125
+      ],
+      "results": [
+        126
+      ]
+    }
+  }
+}

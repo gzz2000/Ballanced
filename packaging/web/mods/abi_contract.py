@@ -6,7 +6,17 @@ import pathlib
 ABI_FILE = pathlib.Path(__file__).with_name('abi') / 'v1.json'
 
 def contract():
-    return json.loads(ABI_FILE.read_text())
+    abi = json.loads(ABI_FILE.read_text())
+    extensions = [json.loads(p.read_text()) for p in ABI_FILE.parent.glob('v1-r*.json')]
+    for extension in sorted(extensions, key=lambda x:x['revision']):
+        if extension['id'] != abi['id'] or extension['revision'] != abi['revision'] + 1:
+            raise ValueError('ABI extensions must preserve id and increment revision')
+        for name, signature in extension.get('exports', {}).items():
+            if name in abi['exports'] and abi['exports'][name] != signature:
+                raise ValueError('ABI extension changed existing export: ' + name)
+            abi['exports'][name] = signature
+        abi['revision'] = extension['revision']
+    return abi
 
 def check_headers(include, sdk):
     abi = contract()

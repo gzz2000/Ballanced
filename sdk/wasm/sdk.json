@@ -13,10 +13,10 @@
   "bml": "0.3.14",
   "abi": {
     "id": "ballanceweb-cxx-wasm32-v1",
-    "revision": 0
+    "revision": 1
   },
   "legacySdks": [
     "bw1-6b30dfe53997de66cc0e56ff"
   ],
-  "id": "bw1-db24f6a5fddaf4c0045f72d5"
+  "id": "bw1-52b52372ca2595105916cb86"
 }

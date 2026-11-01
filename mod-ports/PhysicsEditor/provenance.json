@@ -1,0 +1,15 @@
+{
+  "source": "https://github.com/Xenapte/BallancePhysicsEditor",
+  "commit": "e50adf718e1a9555a4275a695daf1315405cf7f5",
+  "version": "0.0.4",
+  "license": "MIT",
+  "changes": [
+    "BML 0.3.14 callback constness and member names",
+    "WASM factories and explicit frame timer type",
+    "Release HUD on unload",
+    "Validate six graph sources before applying values; resolve shared sources",
+    "Handle stock Tutorial freeze/unfreeze graph trailing-space spelling",
+    "Read-only clock/graph/ball acceptance diagnostics"
+  ],
+  "snapshot_scope": "Private configuration/timer caches are not automatically rewound by PracticeTools."
+}

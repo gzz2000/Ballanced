@@ -36,7 +36,7 @@ export async function unpackMod(bytes,sdk){
  const module=await WebAssembly.compile(wasm),exports=new Set(WebAssembly.Module.exports(module).filter(x=>x.kind==='function').map(x=>x.name));
  if(!WebAssembly.Module.customSections(module,'dylink.0').length)throw Error('需要 Emscripten SIDE_MODULE');
  for(const name of [m.create,m.destroy,...m.webExports])if(!exports.has(name))throw Error('缺少插件导出：'+name);
- return {manifest:m,files};
+ return {manifest:m,files,module};
 }
 export function validateModSet(mods){
  const ids=new Set(),symbols=new Set();
@@ -60,6 +60,19 @@ export async function prepareMods(player,catalog,progress=()=>{}){
   mods.push({...mod,source:'user'});
  }
  validateModSet(mods);
+ // Validate direct imports before any side-module constructor runs. Emscripten's
+ // GOT-only finalizer does not catch lazy direct-function stubs such as roundf.
+ const provided=new Set(mods.flatMap(m=>WebAssembly.Module.exports(m.module).map(x=>x.name)));
+ for(const mod of mods){
+  const metadata=player.bwModMetadata(mod.module),missing=[];
+  if(metadata.neededDynlibs.length)throw Error(mod.manifest.id+' 需要未打包的动态库：'+metadata.neededDynlibs.join(', '));
+  for(const entry of WebAssembly.Module.imports(mod.module)){
+   if(entry.kind==='memory'||entry.kind==='table'||['__memory_base','__table_base'].includes(entry.name)||metadata.weakImports.has(entry.name))continue;
+   if(!['env','GOT.mem','GOT.func'].includes(entry.module))throw Error(mod.manifest.id+' 使用不支持的导入模块：'+entry.module);
+   if(!provided.has(entry.name)&&!player.bwHasModSymbol(entry.name))missing.push(entry.name);
+  }
+  if(missing.length)throw Error(mod.manifest.id+' 缺少宿主或依赖接口：'+[...new Set(missing)].join(', '));
+ }
  for(const {manifest:m} of mods)for(const name of m.webExports)if(player['_'+name])throw Error('主程序接口冲突：'+name);
  for(const mod of mods){
   const m=mod.manifest,root='/web-mods/'+m.id;player.FS.mkdirTree(root);
