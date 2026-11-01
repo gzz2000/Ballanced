@@ -125,6 +125,20 @@ async function persist(){
 // catch browser zoom and movement between displays with a different pixel ratio.
 let resizeFrame=0,lastSize='';
 const screenModeKey='ballance.screenMode';
+const resolutionKey='ballance.resolution';
+let resolution=[0,0];
+const resolutionSizes=[[0,0],[640,480],[800,600],[1024,768],[1280,960],[1600,1200],[1920,1440],[2560,1920]];
+try{
+    const saved=JSON.parse(localStorage.getItem(resolutionKey));
+    if(resolutionSizes.some(size=>JSON.stringify(size)===JSON.stringify(saved)))resolution=saved;
+}catch{}
+function selectResolution(width,height){
+    if(!resolutionSizes.some(size=>size[0]===width&&size[1]===height))return;
+    resolution=[width,height];
+    if(player)player.browserResolution=resolution;
+    try{localStorage.setItem(resolutionKey,JSON.stringify(resolution))}catch{}
+    lastSize='';scheduleResize();
+}
 try{if(localStorage.getItem(screenModeKey)==='fill')$('screen-mode').value='fill'}catch{}
 $('screen-mode').onchange=()=>{
     try{localStorage.setItem(screenModeKey,$('screen-mode').value)}catch{}
@@ -134,11 +148,23 @@ function resizeGame(){
     resizeFrame=0;if(!running)return;
     const stage=$('stage');
     let width=Math.floor(stage.clientWidth),height=Math.floor(stage.clientHeight);
-    if($('screen-mode').value!=='fill'){
+    if(resolution[0]){
+        // A fixed window has the requested CSS size where space permits. On a
+        // smaller browser/phone, shrink proportionally instead of cropping it.
+        const scale=Math.min(1,width/resolution[0],height/resolution[1]);
+        const unit=Math.max(1,Math.floor(resolution[0]*scale/4));
+        width=unit*4;height=unit*3;
+    }else if($('screen-mode').value!=='fill'){
         const unit=Math.floor(Math.min(width/4,height/3));
         width=unit*4;height=unit*3;
     }
     if(width<=0||height<=0)return;
+    const mask=$('extended-view-mask');
+    mask.hidden=$('screen-mode').value!=='fill';
+    mask.style.width=width+'px';mask.style.height=height+'px';
+    const coreWidth=Math.min(width,height*4/3);
+    mask.firstElementChild.style.width=coreWidth+'px';
+    mask.firstElementChild.style.height=coreWidth*3/4+'px';
     const key=width+':'+height+':'+devicePixelRatio;
     const canvas=$('canvas');
     if(key!==lastSize||canvas.clientWidth!==width||canvas.clientHeight!==height){
@@ -216,6 +242,7 @@ async function startGame(){
         $('renderer-status').textContent='当前渲染器：'+(gpu.backend==='webgl2'?'WebGL2':'WebGPU');
         const {default:createPlayer}=await import('./PlayerBrowser.mjs');
         player=await createPlayer({canvas:$('canvas'),ballanceGpu:gpu,
+            browserResolution:resolution,onResolutionChange:selectResolution,
             print:line=>console.log(line),printErr:line=>console.error(line),
             onAbort:reason=>showRestart('游戏运行失败：'+reason),
             onBallanceExit:async()=>{

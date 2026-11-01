@@ -13,3 +13,5 @@ body.sidebar-open.editor-open main{grid-template-columns:minmax(0,1fr) 600px}.gr
 html,body{overflow:clip}html{height:100%}
 
 #share-dialog{max-width:min(520px,90vw);border:1px solid #52627a;border-radius:12px;background:#222b38;color:#e7edf5;padding:22px}#share-dialog::backdrop{background:#0009}#share-message{font-size:15px;color:inherit;overflow-wrap:anywhere;margin:0 0 20px}#share-dialog .actions{justify-content:flex-end;margin:0}
+
+#extended-view-mask{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);overflow:hidden;pointer-events:none;display:grid;place-items:center}#extended-view-mask>div{box-shadow:0 0 0 8192px rgba(64,64,64,.45)}#stage.ended #extended-view-mask{display:none}

@@ -457,3 +457,20 @@ The second changes BML SetMaxFrameRate through actual UI widgets132->264 and
 checks9 capture/restore actions before and after those changes. These cases and
 scoped ordinary Level13 checks have not reproduced the user's typed-reference
 restore error. Failure logging is more detailed; that issue is NOT marked fixed.
+
+Browser Graphics resolution / extended view (2026-11-01, E3967):
+The in-game Graphics screen offers Auto plus 640x480, 800x600, 1024x768,
+1280x960, 1600x1200, 1920x1440 and 2560x1920. Choose OK to apply, as in the
+original menu. Auto follows the host fit/fill policy. Fixed sizes use CSS logical
+pixels and center within the available stage; a smaller stage scales them down
+proportionally, with the engine and mouse coordinates using the actual size.
+Device-pixel ratio still determines backing resolution. The explicit preference
+persists separately from Player.ini's last automatically resized window size.
+The virtual Auto display mode has a valid 640x480 bootstrap size, but its menu
+array uses 0x0 and the two BML Graphics formatters label it Auto. Native builds
+retain their original display modes/formatters. No physics/timing changes.
+In fill mode a pointer-transparent gray mask shades only the extra area outside
+the centered 4:3 frame, including top/bottom extensions in portrait orientation.
+A fixed 4:3 size has no extra field of view to shade; select Auto to fill the host.
+Run qualify-resolution.mjs URL OUTPUT for real menu choices/reload/click checks,
+and qualify-screen-mode.mjs for fit/fill, level entry and render-only reset checks.
