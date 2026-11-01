@@ -5,7 +5,7 @@ import {chromium} from 'playwright';import {mkdir,writeFile,readFile} from 'node
 const [url,out,only]=process.argv.slice(2);await mkdir(out,{recursive:true});
 const base='https://github.com/misiroqwq/ballance_misc/raw/refs/heads/main/TAS_Resources/TAS文件合集/';
 const folder=base+'其他/HS 210522 2.20.095 2025-10-12 by fluoresce/';
-const cases={builtin:{action:'tas',level:'1',record:base+'原版关常规/HS01_4740_1.30.344_264_口语大赛_onlyforyou.tas'},custom:{action:'tas',map:folder+'210522图.nmo',record:folder+'210522_2.20.095.tas'}};
+const cases={builtin:{action:'tas',level:process.env.BALLANCE_TEST_LEVEL||'1',record:base+'原版关常规/HS01_4740_1.30.344_264_口语大赛_onlyforyou.tas'},custom:{action:'tas',map:folder+'210522图.nmo',record:folder+'210522_2.20.095.tas'}};
 const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});const results=[];
 try{await Promise.all(Object.entries(cases).filter(([kind])=>!only||kind===only).map(async([kind,params])=>{
  const result={kind,passed:false};results.push(result);const context=await browser.newContext({serviceWorkers:'block',viewport:{width:960,height:780}}),page=await context.newPage();

@@ -1,0 +1,35 @@
+HS08 repeated playback after saving highscore — 2026-11-01
+
+BallanceTAS 377906430fccac35918a216a60f086f37fa41c68 restores gravity in the
+canonical source-runtime TAS level baseline. The previous level left gravity at
+-20; the first load uses the original environment's double-precision -9.81.
+That altered preload box motion, global freeze-check timing and the seesaw's
+rest pose. Before fix second run falls near the first paper-ball turn; after fix
+three successive complete runs reproduce the original successful trajectory.
+No source physics constants or arithmetic changed. Retail bridge/SDK ABI unchanged.
+
+Reproduce/qualify (run from any cwd with absolute input/output paths):
+node packaging/web/qualify-tas-repeat.mjs URL OUTPUT HS08_TAPE 3 [OLD_FIRST_TRACE]
+Tape: corpus_HS08_5721_3.09.448_264.tas
+SHA256:167cdbf6180ba56d4960ede31bcf63387f196c3cafc5592fbf6a7ff52f8bf891
+Chrome156 macOS AppleSilicon, actual WebGL2 page + default dynamic mods.
+Isolated profile, initial unlock bits seeded only before startup. Real TAS picker,
+Level8 navigation, finish, name/highscore confirmation, Home; no document reload.
+Test-only batch64 renders less often without changing recorded sample timing.
+
+PASS:3/3 finishes,0BallOff/Dead,3database updates,0GPUerrors.
+All3runs52,566 traced samples each; delta/keyBits/player position/physics core
+(position, speeds, impulses, freeze state, interpolation quaternions) bit-identical
+between runs and against the pre-fix successful first run.
+Startup visual quaternion/score before ball creation and real-time free delta are
+not included in the equivalence assertion. This does not claim every tape passed.
+PASS: HS08 checkpoints s2500,r4000,r4000,s5100,r5600,r5600,s6000,r8000,r8000;
+9actions, clean finish,0restored-core errors. qualify-share-playback.mjs accepts
+BALLANCE_TEST_LEVEL=8 and BALLANCE_TEST_TAPE for this independently isolated case.
+PASS: frozen old/new SDK WebHello and frozen TAS/Practice HS01+6snapshot actions.
+ABI v1 revision1,13,987 frozen signatures unchanged; same SDK fingerprint.
+
+Release .15 versionfeead50cd1c0015458cf256b (all files equal tested candidate).
+SDK bw1-52b52372ca2595105916cb86. Existing mod packages need no recompilation.
+No proprietary tape/game assets are committed. Detailed local note E3971.txt;
+superseded traces/candidate sites retired per workspace retention policy.
