@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Assemble a local, versioned browser distribution from your game assets."""
-import argparse,gzip,hashlib,json,pathlib,shutil
+import argparse,gzip,hashlib,json,pathlib,shutil,subprocess,sys,importlib.util
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--player',type=pathlib.Path,required=True)
 p.add_argument('--shaders',type=pathlib.Path,required=True)
@@ -9,16 +9,31 @@ p.add_argument('--game',type=pathlib.Path,required=True)
 p.add_argument('--template-user',type=pathlib.Path,required=True)
 p.add_argument('--bml-source',type=pathlib.Path,required=True)
 p.add_argument('--output',type=pathlib.Path,required=True)
+p.add_argument('--mod-build',type=pathlib.Path,help='Engine build with web-mods side modules')
 a=p.parse_args();here=pathlib.Path(__file__).resolve().parent;out=a.output.resolve();out.mkdir(parents=True,exist_ok=False)
 def digest(data):return hashlib.sha256(data).hexdigest()
 def copy(source,name):
     path=out/name;path.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,path);return path
-for name in ('index.html','app.mjs','style.css','tas-grid.mjs','share-links.mjs'):copy(here/'host'/name,name)
+for name in ('index.html','app.mjs','style.css','tas-grid.mjs','share-links.mjs','mods.mjs'):copy(here/'host'/name,name)
 copy(a.player,'PlayerBrowser.mjs');copy(a.player.with_suffix('.wasm'),'PlayerBrowser.wasm')
 copy(a.shaders,'shaders.json')
 copy(a.gl_shaders,'shaders-gl.json')
 for name in ('webgpu.mjs','webgl2.mjs','renderer.mjs'):
     copy(here/'../../Source/RenderEngine/src/CKRasterizer/CKWebGpuRasterizer'/name,name)
+mod_build=(a.mod_build or a.player.resolve().parents[3])
+sdk_dir=mod_build/'web-sdk'
+subprocess.run([sys.executable,str(here/'mods/build-sdk.py'),'--engine',str(here.parents[1]/'Source'),'--bml',str(a.bml_source),'--output',str(sdk_dir)],check=True)
+sdk=json.loads((sdk_dir/'sdk.json').read_text())
+spec=importlib.util.spec_from_file_location('pack_mod',here/'mods/pack-mod.py');packer=importlib.util.module_from_spec(spec);spec.loader.exec_module(packer)
+mods=[]
+for name,entry,exit,requires in [
+    ('BallanceTAS','TAS_Static_Entry','TAS_Static_Exit',['PracticeTools@1.0.0']),
+    ('LegacyTASRuntime','LegacyTAS_Static_Entry','LegacyTAS_Static_Exit',[]),
+    ('PracticeTools','Practice_Static_Entry','Practice_Static_Exit',['BallanceTAS@1.0.0','LegacyTASRuntime@1.0.0'])]:
+    data,meta=packer.pack(sdk,name,'1.0.0',mod_build/'web-mods'/f'{name}.wasm',entry,exit,requires)
+    target=out/'mods'/f'{name}.bwmod';target.parent.mkdir(exist_ok=True);target.write_bytes(data)
+    mods.append(dict(id=name,url='mods/'+target.name,sha256=digest(data)))
+(out/'mods.json').write_text(json.dumps(dict(formatVersion=1,sdk=sdk,mods=mods),indent=2)+'\n')
 assets=[]
 def asset(source,vfs,default=False):
     name=f'assets/{len(assets):04d}.bin';path=copy(source,name)
@@ -43,7 +58,7 @@ for file in files:
 # denominator even when a CDN uses chunked HTTP compression without lengths.
 # Originals stay available for hosts/tests without Service Worker control.
 packs=[];group=[];group_size=0
-packed=[f for f in files if f['url'].startswith('assets/') or f['url'] in ('PlayerBrowser.wasm','shaders.json','shaders-gl.json')]
+packed=[f for f in files if f['url'].startswith(('assets/','mods/')) or f['url'] in ('PlayerBrowser.wasm','shaders.json','shaders-gl.json')]
 def flush_pack():
     if not group:return
     raw=b''.join((out/f['url']).read_bytes() for f in group)

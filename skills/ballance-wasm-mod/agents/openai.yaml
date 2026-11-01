@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ballance WASM Mod Porting"
+  short_description: "Port BML mods into loadable BallanceWeb WASM packages"
+  default_prompt: "Use $ballance-wasm-mod to port this BML mod to the matching BallanceWeb SDK and validate its .bwmod package."

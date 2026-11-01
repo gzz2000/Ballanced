@@ -23,7 +23,7 @@ def run(*command):
     subprocess.run([str(x) for x in command], check=True)
 
 run(emcmake, "cmake", "-S", args.sdl_source.resolve(), "-B", build / "sdl",
-    "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release", "-DSDL_SHARED=OFF",
+    "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Release", "-DCMAKE_POSITION_INDEPENDENT_CODE=ON", "-DSDL_SHARED=OFF",
     "-DSDL_STATIC=ON", "-DSDL_TEST_LIBRARY=OFF", "-DSDL_TESTS=OFF",
     "-DSDL_EXAMPLES=OFF", f"-DCMAKE_INSTALL_PREFIX={build / 'sdl-install'}")
 run("cmake", "--build", build / "sdl", "--parallel", args.jobs)

@@ -2,7 +2,9 @@ Ballanced WebAssembly / WebGPU / WebGL2
 =============================
 One shared engine builds three hosts: Node (Player.js), headless browser Worker
 (PlayerWeb.mjs), and interactive WebGPU/WebGL2 (PlayerBrowser.mjs). CK2, BuildingBlocks /
-IVP, BML Plus, BallanceTAS, LegacyTASRuntime and PracticeTools are linked statically.
+IVP and BML Plus remain in the host. The interactive browser dynamically loads
+BallanceTAS, LegacyTASRuntime and PracticeTools from separate .bwmod packages;
+Node/Worker qualification hosts retain their static mod linkage.
 Node uses NODERAWFS for isolated reference tests. The interactive host uses MEMFS,
 IDBFS user persistence and a yielding requestAnimationFrame loop.
 
@@ -474,3 +476,35 @@ the centered 4:3 frame, including top/bottom extensions in portrait orientation.
 A fixed 4:3 size has no extra field of view to shade; select Auto to fill the host.
 Run qualify-resolution.mjs URL OUTPUT for real menu choices/reload/click checks,
 and qualify-screen-mode.mjs for fit/fill, level entry and render-only reset checks.
+
+Dynamic browser mods (2026-11-01.12)
+----------------------------------
+The browser uses MAIN_MODULE=2 plus an explicit CK/BML/runtime export contract.
+Default mods are SIDE_MODULE packages in mods/, described by mods.json and
+included in the atomic offline cache. They share the engine memory/table.
+BML and its core BML/NewBallType integrations remain part of the host.
+
+Settings / User data / Plugins imports .bwmod packages into persistent IDBFS.
+Install/remove takes effect at document restart; no live-level hot unload.
+Native .bmodp binaries require source porting. Windows/macOS binaries cannot run
+as WASM. Mods are trusted code in the same engine memory, not isolated sandboxes.
+
+The packager exports a matching SDK to <engine-build>/web-sdk. Distribute that
+folder as a separate SDK ZIP, without game assets. It includes public headers,
+licenses, sdk.json, BallanceWebMod.cmake, pack-mod.py and a working example.
+The full package specification is packaging/web/mods/FORMAT.md. The reusable
+Codex skill is skills/ballance-wasm-mod; install that directory below
+~/.codex/skills and invoke $ballance-wasm-mod with the mod source and SDK.
+
+Standalone example (after activating the exact Emscripten version in sdk.json):
+  emcmake cmake -S /path/to/sdk/example -B /path/to/example-build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release -DBALLANCE_WEB_SDK=/path/to/sdk
+  cmake --build /path/to/example-build
+Import WebHello.bwmod. Its resource read, menu callback and shutdown callback
+are checked by qualify-mods.mjs URL OUTPUT /path/to/WebHello.bwmod, along with
+SDK/path/hash/dependency rejection, persistence, offline reload and removal.
+
+Dynamic-host qualification: HS01 completes with no falls, also with two captures
+and four restores. Rate-change checks cover 132→264 and repeated/overwritten
+checkpoints. This does not requalify the paused custom-map corpus or arbitrary
+third-party private state for full-world snapshots.

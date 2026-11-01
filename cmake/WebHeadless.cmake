@@ -1,5 +1,6 @@
 # Initial cache for the first WebAssembly qualification stage. This is a
 # Node-hosted WASM runner with host filesystem access, NOT the browser release.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "WASM dynamic-link compatible objects")
 set(BALLANCE_BUILD_STATIC ON CACHE BOOL "")
 set(CKRE_BUILD_SDL_GPU_RASTERIZER OFF CACHE BOOL "")
 set(CKPLUGINS_BUILD_AVIREADER ON CACHE BOOL "")

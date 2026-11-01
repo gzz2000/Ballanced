@@ -1,3 +1,4 @@
+import {prepareMods,unpackMod,validateModSet,modStore} from './mods.mjs';
 import {startShareLinks} from './share-links.mjs';
 import {createTASGrid} from './tas-grid.mjs';
 import {createBallanceRenderer} from './renderer.mjs';
@@ -28,6 +29,7 @@ for(const type of ['keydown','keypress'])document.addEventListener(type,event=>{
         event.stopImmediatePropagation();
     }
 });
+let modCatalog;
 let player,gpu,running=false,userReady=false,syncTail=Promise.resolve(),timer,restartNeedsSave=false;
 const status=text=>{$('status').textContent=text};
 const storage=text=>{$('storage').textContent=text};
@@ -299,6 +301,11 @@ async function startGame(){
                 player.FS.mkdirTree(asset.vfs.slice(0,asset.vfs.lastIndexOf('/')));player.FS.writeFile(asset.vfs,bytes);
             }
         }));
+        modCatalog=await (await fetch('mods.json')).json();
+        $('import-mods').disabled=false;refreshMods();
+        const loadedMods=await prepareMods(player,modCatalog,status);
+        player.webMods=loadedMods;player.webModCatalog=modCatalog;refreshMods();
+        $('mods-status').textContent='已动态加载 '+loadedMods.length+' 个插件。';
         const code=player.callMain(['--root-path','/game','--cmo','/game/base.cmo','--user-data-path','/user','--rasterizer','webgpu']);
         if(code)throw new Error('Player 初始化失败 '+code);
         running=true;resizeGame();gpu.setSamples(Number($('samples').value));
@@ -321,6 +328,39 @@ $('restart').onclick=async()=>{
 };
 $('samples').onchange=()=>gpu?.setSamples(Number($('samples').value));
 $('save').onclick=()=>{void persist().catch(()=>{})};$('refresh').onclick=listFiles;
+function refreshMods(){
+    $('mod-list').replaceChildren();if(!modCatalog||!player)return;
+    player.FS.mkdirTree(modStore);
+    for(const item of modCatalog.mods){const li=document.createElement('li');li.textContent=item.id+' · 默认';$('mod-list').append(li)}
+    for(const file of player.FS.readdir(modStore).sort())if(file.endsWith('.bwmod')){
+        const li=document.createElement('li');li.textContent=file.slice(0,-6)+' · 已安装 ';
+        const button=document.createElement('button');button.textContent='移除';button.onclick=async()=>{
+            button.disabled=true;try{player.FS.unlink(modStore+'/'+file);await persist();refreshMods();$('restart-mods').disabled=false;$('mods-status').textContent='已移除，重启游戏后生效。'}catch(e){$('mods-status').textContent=e.message;button.disabled=false}
+        };li.append(button);$('mod-list').append(li);
+    }
+}
+$('import-mods').onchange=async()=>{
+    const input=$('import-mods');input.disabled=true;
+    try{
+        const proposed=new Map();
+        for(const file of input.files){
+            if(file.size>128*1024*1024)throw Error('插件包超过128MB');
+            const bytes=new Uint8Array(await file.arrayBuffer()),mod=await unpackMod(bytes,modCatalog.sdk);
+            if(modCatalog.mods.some(x=>x.id===mod.manifest.id))throw Error('默认插件随游戏更新，不能在这里替换：'+mod.manifest.id);
+            if(proposed.has(mod.manifest.id))throw Error('重复插件：'+mod.manifest.id);
+            proposed.set(mod.manifest.id,{mod,bytes});
+        }
+        const combined=(player.webDefaultMods||[]).map(manifest=>({manifest}));
+        for(const file of player.FS.readdir(modStore))if(file.endsWith('.bwmod')&&!proposed.has(file.slice(0,-6)))combined.push(await unpackMod(player.FS.readFile(modStore+'/'+file),modCatalog.sdk));
+        combined.push(...[...proposed.values()].map(x=>x.mod));validateModSet(combined);
+        for(const [id,{bytes}] of proposed){const path=modStore+'/'+id+'.bwmod';player.FS.writeFile(path+'.tmp',bytes);player.FS.rename(path+'.tmp',path)}
+        await persist();refreshMods();$('restart-mods').disabled=false;$('mods-status').textContent='插件已保存，重启游戏后加载。';
+    }catch(e){$('mods-status').textContent='安装失败：'+e.message}
+    finally{input.disabled=false;input.value=''}
+};
+$('restart-mods').onclick=async()=>{
+    $('restart-mods').disabled=true;try{await persist();location.reload()}catch(e){$('mods-status').textContent=e.message;$('restart-mods').disabled=false}
+};
 $('maps').onchange=()=>importFiles($('maps'),'/user/ModLoader/Maps','.nmo');
 $('tapes').onchange=()=>importFiles($('tapes'),'/user/ModLoader/TAS','.tas');
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&userReady)void persist().catch(()=>{})});
