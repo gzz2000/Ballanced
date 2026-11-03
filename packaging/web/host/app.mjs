@@ -16,7 +16,9 @@ for(const type of ['keydown','keypress'])document.addEventListener(type,event=>{
     // Navigation keys belong to the game even during OS key repeat. SDL may
     // decline a repeated edge; that must not re-enable browser scroll/defaults.
     // Keep delivering every event to SDL and never clear the held physical key.
-    if(event.target===$('canvas')&&['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','Tab'].includes(event.code))event.preventDefault();
+    // Cancelling Space keydown suppresses the keypress SDL uses for text.
+    // Cancel its keypress default instead, preserving console spaces without scrolling.
+    if(event.target===$('canvas')&&(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Tab'].includes(event.code)||(event.code==='Space'&&type==='keypress')))event.preventDefault();
     if(event.target!==$('canvas')){
         if(type==='keydown'&&event.target.getAttribute?.('role')==='tab'&&['ArrowLeft','ArrowRight','Home','End'].includes(event.key)){
             const index=tabs.indexOf(event.target.id.slice(4));

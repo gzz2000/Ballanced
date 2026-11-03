@@ -8,6 +8,7 @@ Import packages in Settings → User data → Plugins and restart the game.
 
 | Port | Source version | Tested behavior / remaining scope |
 | --- | --- | --- |
+| [DebugUtilities](DebugUtilities/README.md) | 0.3.2-web.1 | Bundled BML debug commands and keys, standalone dynamic SDK build; transient private state is not snapshot-integrated |
 | PositionViewer | 0.1.0 | Real position/speed HUD, clock rewind after restore, configuration and unload |
 | EnergyItemCounter | 0.1.1 (download was 0.1.0) | Level10 collect → restore → recollect → restore, visible count and multiline text |
 | KeystrokeViewer | 0.1.0 | Held/released arrows, held input across restore, all-key mode, configuration persistence |

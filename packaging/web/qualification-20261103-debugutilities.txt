@@ -1,0 +1,32 @@
+DebugUtilities dynamic port — 2026-11-03
+Source: BML c96b60e2 (full identity in dependencies.json and mod-ports/DebugUtilities).
+SDK bw1-52b52372ca2595105916cb86, ABI v1 rev1; Emscripten6.0.13.
+Host candidate/release version:0cda440863ebf779fabf6c3c.
+No host C++/Wasm rebuild or ABI changes required for this plugin.
+
+Chrome156 macOS / real WebGL2, independent disposable profiles. UI-installed
+.bwmod + restart, live read-only CK array/entity inspection, DOM command input.
+PASS ordinary: /cheat, score set/add/sub exactly12345/12445/12395 whilepaused;
+speed1/2/1 verifies0.43/0.86/0.43 force; heldCtrl3x/release1x; heldF render toggle;
+L life3->4; I/O/P paper/wood/stone; F1 lifts ball, F2 exercised; two restores;
+J/K/N/M summon4 objects with PH rows51->55; restorepre->51/0owned; overwrite
+with1summoned,spawnanother,restoretwice->1; spawncommand,Backspace reset;
+sector2,sector999 clampsfinal4,return2; R suicide/life4->3; win LevelFinish.
+Clean quit/unload/restart;config persists;offline refresh dynamically reloads
+DebugUtilities;remove viaUI,restart,absent. Zero GPUerrors.
+PASS installed-but-idle referenceHS01 TAS finish,noBallOff/Dead,0GPUerrors.
+PASS console regression remappedFullSpeedF6:5commands,Tab+ShiftTab completion,
+history,inputhandoff andF6press/release,oldTabinactive;0GPU/pageerrors.
+
+Space input exposed a host bug: cancelling canvas Space keydown suppresses SDL's
+keypress text. Host now cancels Space keypress default, preserving console spaces
+without browser scrolling; arrows/Tab remain intercepted as before. The actual
+spaced score/speed/sector commands above verify text transport end-to-end.
+
+BML port handles native/reconstructed array-string overloads, integer timer units,
+normalized camera paths,strtol/strtod fromfrozenABI,livePHownership afterrestore,
+missing/final checkpoint boundaries,and renderoptions onlyontoggle.
+Limit: no arbitrary plugin-private-state snapshot provider. In-progress previews,
+deferredcallbacks,cooldowns,private toggles not promisedrewound. No fullTAScorpus,
+trajectory equality,Android/nativebundle,custom-map sector qualification claimed.
+Harness: mod-ports/tests/qualify-debugutilities.mjs. Workspace note:E3973.txt.
