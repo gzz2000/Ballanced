@@ -34,6 +34,10 @@ for name,entry,exit,requires in [
     data,meta=packer.pack(sdk,name,'1.0.0',mod_build/'web-mods'/f'{name}.wasm',entry,exit,requires)
     target=out/'mods'/f'{name}.bwmod';target.parent.mkdir(exist_ok=True);target.write_bytes(data)
     mods.append(dict(id=name,url='mods/'+target.name,sha256=digest(data)))
+# Same independently packaged side module that users could previously import.
+# Include it before manifest/offline-pack hashing so it is available offline too.
+debug=copy(mod_build/'Source/Player/src/DebugUtilities.bwmod','mods/DebugUtilities.bwmod')
+mods.append(dict(id='DebugUtilities',url='mods/'+debug.name,sha256=digest(debug.read_bytes())))
 (out/'mods.json').write_text(json.dumps(dict(formatVersion=1,sdk=sdk,mods=mods),indent=2)+'\n')
 assets=[]
 def asset(source,vfs,default=False):

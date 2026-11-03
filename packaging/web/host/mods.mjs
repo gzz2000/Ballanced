@@ -56,7 +56,9 @@ export async function prepareMods(player,catalog,progress=()=>{}){
  player.webDefaultMods=mods.map(({manifest})=>manifest);
  for(const file of player.FS.readdir(modStore).sort())if(file.endsWith('.bwmod')){
   const mod=await unpackMod(player.FS.readFile(modStore+'/'+file),catalog.sdk);
-  if(catalog.mods.some(x=>x.id===mod.manifest.id))throw Error('内置插件不能被用户包替换：'+mod.manifest.id);
+  // A previously optional plugin can become bundled after a site update.
+  // Keep the old package on disk, but load only the current bundled version.
+  if(catalog.mods.some(x=>x.id===mod.manifest.id))continue;
   mods.push({...mod,source:'user'});
  }
  validateModSet(mods);

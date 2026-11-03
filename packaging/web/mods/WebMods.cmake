@@ -34,7 +34,15 @@ ballance_web_side_module(BallanceTAS BallanceTAS tas_core tas_game tas_scripting
     tas_features tas_lua_bindings tas_ui tas_lua_runtime lua::lua fmt::fmt)
 ballance_web_side_module(LegacyTASRuntime LegacyTASRuntime)
 ballance_web_side_module(PracticeTools PracticeTools)
-add_dependencies(PlayerBrowser BallanceTASWeb LegacyTASRuntimeWeb PracticeToolsWeb)
+# Build the bundled debug mod against the published SDK, just like an external
+# plugin. It remains a side module; there is no second CK/BML engine instance.
+set(BALLANCE_WEB_SDK "${CMAKE_SOURCE_DIR}/sdk/wasm")
+include("${BALLANCE_WEB_SDK}/BallanceWebMod.cmake")
+ballance_web_mod(DebugUtilitiesWeb ID DebugUtilities VERSION 0.3.2-web.1
+    SOURCES "${BALLANCE_BML_SOURCE_DIR}/mods/DebugUtilities/DebugUtilities.cpp"
+        "${BALLANCE_BML_SOURCE_DIR}/mods/DebugUtilities/DebugCommands.cpp"
+    RESOURCES "${BALLANCE_BML_SOURCE_DIR}/LICENSE=LICENSE")
+add_dependencies(PlayerBrowser BallanceTASWeb LegacyTASRuntimeWeb PracticeToolsWeb DebugUtilitiesWebPackage)
 get_target_property(_links PlayerBrowser LINK_LIBRARIES)
 list(REMOVE_ITEM _links BallanceTAS LegacyTASRuntime PracticeTools)
 set_property(TARGET PlayerBrowser PROPERTY LINK_LIBRARIES "${_links}")

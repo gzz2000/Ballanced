@@ -336,7 +336,7 @@ function refreshMods(){
     player.FS.mkdirTree(modStore);
     for(const item of modCatalog.mods){const li=document.createElement('li');li.textContent=item.id+' · 默认';$('mod-list').append(li)}
     for(const file of player.FS.readdir(modStore).sort())if(file.endsWith('.bwmod')){
-        const li=document.createElement('li');li.textContent=file.slice(0,-6)+' · 已安装 ';
+        const li=document.createElement('li');li.textContent=file.slice(0,-6)+(modCatalog.mods.some(x=>x.id===file.slice(0,-6))?' · 已由默认版本取代 ':' · 已安装 ');
         const button=document.createElement('button');button.textContent='移除';button.onclick=async()=>{
             button.disabled=true;try{player.FS.unlink(modStore+'/'+file);await persist();refreshMods();$('restart-mods').disabled=false;$('mods-status').textContent='已移除，重启游戏后生效。'}catch(e){$('mods-status').textContent=e.message;button.disabled=false}
         };li.append(button);$('mod-list').append(li);
@@ -354,7 +354,10 @@ $('import-mods').onchange=async()=>{
             proposed.set(mod.manifest.id,{mod,bytes});
         }
         const combined=(player.webDefaultMods||[]).map(manifest=>({manifest}));
-        for(const file of player.FS.readdir(modStore))if(file.endsWith('.bwmod')&&!proposed.has(file.slice(0,-6)))combined.push(await unpackMod(player.FS.readFile(modStore+'/'+file),modCatalog.sdk));
+        for(const file of player.FS.readdir(modStore))if(file.endsWith('.bwmod')&&!proposed.has(file.slice(0,-6))){
+            const mod=await unpackMod(player.FS.readFile(modStore+'/'+file),modCatalog.sdk);
+            if(!modCatalog.mods.some(x=>x.id===mod.manifest.id))combined.push(mod);
+        }
         combined.push(...[...proposed.values()].map(x=>x.mod));validateModSet(combined);
         for(const [id,{bytes}] of proposed){const path=modStore+'/'+id+'.bwmod';player.FS.writeFile(path+'.tmp',bytes);player.FS.rename(path+'.tmp',path)}
         await persist();refreshMods();$('restart-mods').disabled=false;$('mods-status').textContent='插件已保存，重启游戏后加载。';

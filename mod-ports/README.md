@@ -2,7 +2,8 @@
 
 This batch starts from the previously downloaded ys168 plugin collection and
 records each source revision, binary identity and license in its own directory.
-These are optional, separately installed `.bwmod` packages, not default mods.
+These are optional, separately installed `.bwmod` packages, except DebugUtilities:
+it is bundled by default starting with BallanceWeb 20261103.3.
 Use BallanceWeb 20261101.14 or later with ABI `ballanceweb-cxx-wasm32-v1` revision1.
 Import packages in Settings → User data → Plugins and restart the game.
 

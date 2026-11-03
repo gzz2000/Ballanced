@@ -1,5 +1,9 @@
 # DebugUtilities
 
+Bundled by default in BallanceWeb 20261103.3 and later. No manual import is needed.
+An older user-installed copy remains on disk but the bundled version takes
+precedence; existing configuration is preserved. Cheat mode remains off by default.
+
 The authoritative port source stays in BML Plus's bundled mod directory:
 https://github.com/gzz2000/BallanceModLoaderPlus/tree/web-port/mods/DebugUtilities
 
