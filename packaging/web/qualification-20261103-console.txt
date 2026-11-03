@@ -1,0 +1,26 @@
+Console command/completion regression — 2026-11-03
+BML5f194fca87b6d00484116020b194344c5f7e77fb,version5d459cab7c90ce71d16343aa.
+
+Root cause: SDL RuntimePosix treated text-input visibility as active IME
+composition, suppressing every ordinary command submit/completion/history action.
+It now reports no composition rail (this backend has no IMM/TSF implementation).
+Bui also retains keyboard ownership through ImGui down plus game down/release
+edges: their event timelines differ under the browser fixed-step scheduler.
+No raw keyboard reset and no change to SDK ABI or physics arithmetic.
+
+Run: node packaging/web/qualify-console.mjs URL OUTPUT
+Optional BALLANCE_TEST_BINDING=tab or f6 runs each independent profile separately.
+Real Chrome156 DOM keyboard input,WebGL2,main menu and actualLevel1.
+DefaultTab and remappedF6 both PASS:5commands percase,/cheat Enter toggles,
+che+Tab completes without executing,c+Tab lists candidates,Tab/ShiftTab cycle
+(screenshots inspected),Esc cancels,Up history executespreviouscommand.
+No consoleTab speed override; gameTab/F6 works afterclose and remappedTab does
+not activateoverride. Enter/Escape do not activate underlying menu/pause/exit.
+No GPU/pageerrors. Remap fixture seeds config in its own fresh browser profile.
+
+PASS:old/newSDKWebHello and frozenoldTAS/Practice HS01+6snapshot actions.
+PASS:HS08 two consecutive real-picker plays with highscore save+Home,52,566
+traced samples each,bit-identical dt/keys/player positions/physics core,no death.
+This is scoped coverage,not a new full-corpus/native bundle/IME qualification.
+Frozen ABI v1rev1 signatures13,987 preserved;SDKbw1-52b52372ca2595105916cb86.
+No third-party mod recompilation required. Local procedure/failures:E3972.txt.
